@@ -1,0 +1,314 @@
+/*----------------------------------------------------------------------------*/
+/*                                                                            */
+/*    Module:       main.cpp                                                  */
+/*    Author:       VEX                                                       */
+/*    Created:      Thu Sep 26 2019                                           */
+/*    Description:  Competition Template                                      */
+/*                                                                            */
+/*----------------------------------------------------------------------------*/
+
+// ---- START VEXCODE CONFIGURED DEVICES ----
+// Robot Configuration:
+// [Name]               [Type]        [Port(s)]
+// LeftFrontDM          motor         11              
+// RightFrontDM         motor         1               
+// LeftBackDM           motor         20              
+// RightBackDM          motor         10              
+// Controller1          controller                    
+// Controller2          controller                    
+// InertialS            inertial      21              
+// ---- END VEXCODE CONFIGURED DEVICES ----
+
+#include "vex.h"
+using namespace vex;
+
+// A global instance of competition
+competition Competition;
+
+// define your global instances of motors and other devices here
+
+/*---------------------------------------------------------------------------*/
+/*                          Pre-Autonomous Functions                         */
+/*                                                                           */
+/*  You may want to perform some actions before the competition starts.      */
+/*  Do them in the following function.  You must return from this function   */
+/*  or the autonomous and usercontrol tasks will not be started.  This       */
+/*  function is only called once after the V5 has been powered on and        */
+/*  not every time that the robot is disabled.                               */
+/*---------------------------------------------------------------------------*/
+
+void pre_auton(void) {
+  // Initializing Robot Configuration. DO NOT REMOVE!
+  vexcodeInit();
+
+  // All activities that occur before the competition starts
+  // Example: clearing encoders, setting servo positions, ...
+}
+
+/*---------------------------------------------------------------------------*/
+/*                                                                           */
+/*                              Autonomous Task                              */
+/*                                                                           */
+/*  This task is used to control your robot during the autonomous phase of   */
+/*  a VEX Competition.                                                       */
+/*                                                                           */
+/*  You must modify the code to add your own robot specific commands here.   */
+/*---------------------------------------------------------------------------*/
+void autonomous(void) {
+  // ..........................................................................
+  // Insert autonomous user code here.
+  // ..........................................................................
+}
+enum direction{d0, d90, d180, d270};
+// declare the functions defined in this file
+void moveBase(double fr, double lr);
+void spinMotorPct(motor motorx, double vm);
+void spinBase(double sy, double sx);
+void spinBase2(direction);
+
+/*---------------------------------------------------------------------------
+ User Control Task - Used to control robot during the user control phase of
+ the VEX Competition
+---------------------------------------------------------------------------*/
+void usercontrol(void) {
+  //calibrating inertial sensor
+  InertialS.startCalibration();
+  while (InertialS.isCalibrating())
+    vexDelay(20);
+ 
+  // variables to hold controller 1 values, initialized to 0
+  double c1a1pos = 0; // controller 1, axis 1
+  double c1a2pos = 0; // controller 1, axis 2
+  double c1a3pos = 0; // controller 1, axis 3
+  double c1a4pos = 0; // controller 1, axis 4
+
+  // variables to hold controller 2 values, initialized to 0
+  double c2a1pos = 0; // controller 2, axis 1
+  double c2a2pos = 0; // controller 2, axis 2
+  double c2a3pos = 0; // controller 2, axis 3
+  double c2a4pos = 0; // controller 2, axis 4
+  //4 buttons that turn robot
+  double c1bup = 0; //up button
+  double c1bdn = 0; //down button
+  double c1blt = 0; //left button
+  double c1brt = 0; //right button
+
+  // to reduce jitters, we will take multile readings and average; 
+  // this is a better alternative to using a deadband
+  // number of readings averaged = JTR_AVG
+  const int JTR_AVG = 20;
+  // initialize a counter that will count up to JTR_AVG
+  int jctr = 1;
+
+  while (1) {
+    // This is the main execution loop for the user control program.
+    // Each time through the loop your program should update motor + servo
+    // values based on feedback from the joysticks.
+
+    // The 4 buttons that turn robot
+    c1bup = Controller1.ButtonUp.pressing();
+    c1bdn = Controller1.ButtonDown.pressing();
+    c1blt = Controller1.ButtonLeft.pressing();
+    c1brt = Controller1.ButtonRight.pressing();
+
+    // to avoid jitters, take an average of JTR_AVG consequitive readings
+    if (jctr <= JTR_AVG) {
+      // Read axes positions on controller 1 and add them up
+      c1a1pos += Controller1.Axis1.position();
+      c1a2pos += Controller1.Axis2.position();
+      c1a3pos += Controller1.Axis3.position();
+      c1a4pos += Controller1.Axis4.position();
+
+      /*// print a debug statement, if at least one of the values read is != 0
+      if (c1a1pos != 0 or c1a2pos != 0 or c1a3pos != 0 or c1a4pos != 0) {
+        fflush(stdout);
+        printf("\n [raw] jctr: %d | c1a1pos=%06.2f, c1a2pos=%06.2f, "
+               "c1a3pos=%06.2f, c1a4pos=%06.2f",
+               jctr, c1a1pos, c1a2pos, c1a3pos, c1a4pos);
+      } */
+
+      // Read axes positions on controller 2 and add them up
+      c2a1pos += Controller2.Axis1.position();
+      c2a2pos += Controller2.Axis2.position();
+      c2a3pos += Controller2.Axis3.position();
+      c2a4pos += Controller2.Axis4.position();
+
+      jctr++; // increment counter
+      continue; // go back to beginning of while loop for the next reading
+
+    } else { // jctr reached JTR_AVG
+      
+      // take the average of controller 1 readings
+      c1a1pos /= JTR_AVG;
+      c1a2pos /= JTR_AVG;
+      c1a3pos /= JTR_AVG;
+      c1a4pos /= JTR_AVG;
+      /*// print a debug statement, if at least one of the values averaged is != 0
+      if (c1a1pos != 0 or c1a2pos != 0 or c1a3pos != 0 or c1a4pos != 0) {
+        fflush(stdout);
+        printf("\n [averaged] jctr: %d | c1a1pos=%06.2f, c1a2pos=%06.2f, "
+               "c1a3pos=%06.2f, c1a4pos=%06.2f",
+               jctr, c1a1pos, c1a2pos, c1a3pos, c1a4pos);
+      }*/
+
+      // take the average of controller 2 readings
+      c2a1pos /= JTR_AVG;
+      c2a2pos /= JTR_AVG;
+      c2a3pos /= JTR_AVG;
+      c2a4pos /= JTR_AVG;
+
+      // reset the counter
+      jctr = 1;
+    }
+  
+    if(Controller1.ButtonR1.pressing()) {
+      if (c1bup == true)
+        spinBase2(d0);
+      else if (c1brt == true)
+        spinBase2(d90);
+      else if (c1bdn == true)
+        spinBase2(d180);
+      else if (c1blt == true)
+        spinBase2(d270);
+    } else {
+      moveBase(c1a3pos, c1a4pos);
+    }
+  }
+}// end usercontrol()
+
+/*---------------------------------------------------------------------------
+  spinMotorPct spins a motor a percentage unit of velocity, with direction
+ (fwd/reverse) determined by the sign of the velocity passed:
+ * if the velocity is +ve, spins motor forward
+ * if the velocity is -ve, spins motor in reverse
+ Note: For motor velocity vm = 0, the motor coasts (does not brake)
+ Inputs:
+ - motor motorx - object of the motor to be spun
+ - double vm - signed motor velocity (in percentage)
+
+ Returns: void
+ ---------------------------------------------------------------------------*/
+void spinMotorPct(motor motorx, double vm) {
+  if (vm == 0) { // if the velocity is 0, coast the motor
+    motorx.stop(coast);
+  } else if (vm > 0) { // if the velocity is +ve, spin motor forward
+    motorx.spin(fwd, vm, pct);
+  } else { // if the velocity is -ve, spin motor in reverse
+    motorx.spin(reverse, -vm, pct);
+  }
+}
+
+/*---------------------------------------------------------------------------
+  moveBase moves the robot base in all directions. It uses lr and fr to
+  calculate intended robot velocity and direction. It then translates
+  these into velocity and direction (of rotation) for the four wheel motors.
+  Inputs:
+    int fr - joystick position on the "front-rear" axis
+    int lr - joystick position on the "left-right" axis
+  ---------------------------------------------------------------------------*/
+void moveBase(double fr, double lr) {
+
+  // calculate intended velocity of robot, based on fr & lr joystick positions
+  // basically the distance from (0,0) to (fr,lr) or a hypotenuse calculation
+  double vr = sqrt((fr * fr) + (lr * lr));
+  // hardware tolerances on the controller joysticks may cause lr,fr values
+  // to be such that vr is >100 in certain cases; so limit vr to 100
+  vr = (vr > 100) ? 100.00 : vr;
+  // round out vr to 0, if less than 1
+  vr = (vr < 1) ? 0.00 : vr;
+  // if debugging (i.e. observing physical wheel movement), set a low vr
+  // ***IMPORTANT***: Remember to comment out, when not debugging
+  //vr = (vr != 0) ? 20 : vr; 
+
+  if (vr == 0) { // nothing to do, just coast
+    spinMotorPct(LeftFrontDM, 0);
+    spinMotorPct(RightBackDM, 0);
+    spinMotorPct(LeftBackDM, 0);
+    spinMotorPct(RightFrontDM, 0);
+    //printf("\n vr=0; just coasting");
+    return;
+    }
+  double vr_m = 0; // modified vr, to be used later
+
+  // Calculate the intended angle of movement of robot (tan inverse of fr÷lr)
+  // Examples:
+  // -  90 deg: straight ahead
+  // - 270 deg: straight backwards (reverse)
+  // -   0 deg: stafe right
+  // - 180 deg: stafe left
+  double car = atan2(fr, lr); // returns an angle in radians
+  car = car * 180 / M_PI;     // convert radians to degrees for easier reading
+  if (car < 0)                // since we are considering a 360 deg system,
+    car += 360;               // convert -ve angles (-180 to 0) to +ve
+  printf("\n fr=%7.2f, lr=%7.2f => car=%5.1f, vr=%7.2f", fr, lr, car, vr);
+
+  // use the calculated angle of robot (car) to determine velocity (and
+  // direction) at each of the 4 wheels
+  if (car >= 0 and car <= 90) {
+    vr_m = vr * (((car - 0) / (45 - 0)) - 1);
+    spinMotorPct(LeftFrontDM,  vr); spinMotorPct(RightFrontDM, vr_m);
+    spinMotorPct(LeftBackDM, vr_m); spinMotorPct(RightBackDM,    vr);
+    printf("\n Q1: LeftFrontDM: vr=%7.2f, RightFrontDM: vr=%7.2f, "
+           "\n     LeftBackDM : vr=%7.2f, RightBackDM : vr=%7.2f\n",
+           vr, vr_m, vr_m, vr);
+  } else if (car > 90 and car <= 180) {
+    vr_m = -vr * (((car - 90) / (135 - 90) - 1));
+    spinMotorPct(LeftFrontDM, vr_m); spinMotorPct(RightFrontDM,  vr);
+    spinMotorPct(LeftBackDM,    vr); spinMotorPct(RightBackDM, vr_m); 
+    printf("\n Q2: LeftFrontDM: vr=%7.2f, RightFrontDM: vr=%7.2f, "
+           "\n     LeftBackDM : vr=%7.2f, RightBackDM : vr=%7.2f\n",
+           vr_m, vr, vr, vr_m);
+  } else if (car > 180 and car <= 270) {
+    vr_m = -vr * (((car - 180) / (225 - 180)) - 1);
+    spinMotorPct(LeftFrontDM,   -vr); spinMotorPct(RightFrontDM, vr_m);
+    spinMotorPct(LeftBackDM,   vr_m); spinMotorPct(RightBackDM,   -vr);
+    printf("\n Q3: LeftFrontDM: vr=%7.2f, RightFrontDM: vr=%7.2f, "
+           "\n     LeftBackDM : vr=%7.2f, RightBackDM : vr=%7.2f\n",
+           -vr, vr_m, vr_m, -vr);
+  } else if (car > 270 and car < 360) {
+    vr_m = vr * (((car - 270) / (315 - 270)) - 1);
+    spinMotorPct(LeftFrontDM, vr_m); spinMotorPct(RightFrontDM,   -vr);
+    spinMotorPct(LeftBackDM,    -vr); spinMotorPct(RightBackDM,  vr_m);  
+    printf("\n Q4: LeftFrontDM: vr=%7.2f, RightFrontDM: vr=%7.2f, "
+           "\n     LeftBackDM : vr=%7.2f, RightBackDM : vr=%7.2f\n",
+           vr_m, -vr, -vr, vr_m);
+  }
+} // end moveBase()
+
+
+void spinBase(double sy, double sx) {
+  double vrs = sqrt((sy*sy)+(sx*sx));
+  vrs = (vrs > 100) ? 100.00 : vrs;
+  vrs = (vrs < 1) ? 0.00 : vrs;
+  //vrs = (vrs > 20) ? 20 : vrs;
+
+  double cars = atan2(sy, sx); // returns an angle in radians
+  cars = cars * 180 / M_PI;     // convert radians to degrees for easier reading
+  if (cars < 0){                // since we are considering a 360 deg system,
+    cars += 360;               // convert -ve angles (-180 to 0) to +ve
+
+  }
+  if( cars == 0) {
+    spinMotorPct(LeftFrontDM, vrs); spinMotorPct(RightFrontDM, -vrs);
+    spinMotorPct(LeftBackDM,  vrs); spinMotorPct(RightBackDM,  -vrs);
+  } else if( cars == 180) {
+    spinMotorPct(LeftFrontDM, -vrs); spinMotorPct(RightFrontDM, vrs);
+    spinMotorPct(LeftBackDM,  -vrs); spinMotorPct(RightBackDM,  vrs);
+  }
+};
+  
+
+
+int main() {
+  // Set up callbacks for autonomous and driver control periods.
+  Competition.autonomous(autonomous);
+  Competition.drivercontrol(usercontrol);
+
+  // Run the pre-autonomous function.
+  pre_auton();
+
+  // Prevent main from exiting with an infinite loop.
+  while (true) {
+    wait(100, msec);
+  }
+}
