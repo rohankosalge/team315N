@@ -1,0 +1,217 @@
+/*----------------------------------------------------------------------------*/
+/*                                                                            */
+/*    Module:       main.cpp                                                  */
+/*    Author:       VEX                                                       */
+/*    Created:      Thursday, September 26, 2020                              */
+/*    Description:  Competition Template                                      */
+/*                                                                            */
+/*----------------------------------------------------------------------------*/
+
+// ---- START VEXCODE CONFIGURED DEVICES ----
+// Robot Configuration:
+// [Name]               [Type]        [Port(s)]
+// LeftFront            motor         1               
+// LeftBack             motor         2               
+// RightFront           motor         3               
+// RightBack            motor         4               
+// TopRollers           motor         5               
+// BottomRollers        motor         6               
+// LeftIntake           motor         7               
+// RightIntake          motor         8               
+// Controller1          controller                    
+// ---- END VEXCODE CONFIGURED DEVICES ----
+
+#include "vex.h"
+
+using namespace vex;
+
+// A global instance of competition
+competition Competition;
+
+// define joystick values for drivetrain here
+int axis3pos; // joystick value for driving (forward and backward) on the left joystick
+int axis1pos; // joystick value for turning (left and right) on the right joystick
+
+// define your global instances of motors and other devices here
+
+/*---------------------------------------------------------------------------*/
+/*                          Pre-Autonomous Functions                         */
+/*                                                                           */
+/*  You may want to perform some actions before the competition starts.      */
+/*  Do them in the following function.  You must return from this function   */
+/*  or the autonomous and usercontrol tasks will not be started.  This       */
+/*  function is only called once after the V5 has been powered on and        */
+/*  not every time that the robot is disabled.                               */
+/*---------------------------------------------------------------------------*/
+
+void pre_auton(void) {
+  // Initializing Robot Configuration. DO NOT REMOVE!
+  vexcodeInit();
+
+  // All activities that occur before the competition starts
+  // Example: clearing encoders, setting servo positions, ...
+}
+
+/*---------------------------------------------------------------------------*/
+/*                                                                           */
+/*                              Autonomous Task                              */
+/*                                                                           */
+/*  This task is used to control your robot during the autonomous phase of   */
+/*  a VEX Competition.                                                       */
+/*                                                                           */
+/*  You must modify the code to add your own robot specific commands here.   */
+/*---------------------------------------------------------------------------*/
+
+void autonomous(void) {
+  // ..........................................................................
+  // Insert autonomous user code here.
+  // ..........................................................................
+}
+
+/*--------------------------------------------------------------------------------*/
+/*                                                                                */
+/*                               User Control Task                                */
+/*                                                                                */
+/*   This task is used to control your robot during the user control phase of     */
+/*   a VEX Competition.                                                           */
+/*                                                                                */
+/*   BETWEEN THIS COMMENT AND THE USERCONTROL VOID ARE THE CONTROLLER FUNCTIONS.  */
+/*--------------------------------------------------------------------------------*/
+
+// JOYSTICK DRIVE FUNCTION
+
+void drive_motors(){
+  /* two types of motion for the drive motors
+  1. stationary turning
+  - driving joystick is idle, only turning
+  - always end up in the same position after turn (turning about center of robot)
+  2. smooth turning
+  - driving joystick and turning joystick mash up
+  - plug values in formula, motor speeds are the resulting output                 */
+
+  int lw; int rw;  // these variables are only needed as placeholders for the motor speeds
+
+  if(axis3pos == 0){
+    // stationary turning
+    LeftFront.spin(forward, axis1pos, pct);
+    LeftBack.spin(forward, axis1pos, pct);
+    RightFront.spin(reverse, axis1pos, pct);
+    RightBack.spin(reverse, axis1pos, pct);
+  }else{
+    // smooth turning
+    // first check if right joystick is aimed left or right
+
+    if(axis1pos >= 0){                             // turning right or not turning
+      rw = axis3pos * ((100 - axis1pos) / 100);    // right wheels will go slower, based on the position of the right joystick
+      lw = axis3pos;
+    }else{                                         // turning left
+      lw = axis3pos * ((100 + axis1pos) / 100);    // left wheels will go slower, based on the position of the right joystick
+      rw = axis3pos;
+    }
+
+    LeftFront.spin(forward, lw, pct);
+    LeftBack.spin(forward, lw, pct);
+    RightFront.spin(forward, rw, pct);
+    RightBack.spin(forward, rw, pct);
+  }
+}
+
+// INTAKES FUNCTIONS
+
+void startintakes(){
+  // move intakes
+  LeftIntake.spin(forward, 100, pct);
+  RightIntake.spin(forward, 100, pct);
+}
+
+void stopintakes(){
+  // stop intakes
+  LeftIntake.stop();
+  RightIntake.stop();
+}
+
+// ROLLERS FUNCTIONS
+
+void launchrollers(){
+  // move top rollers forward, bottom rollers forward
+  TopRollers.spin(forward, 100, pct);
+  BottomRollers.spin(forward, 100, pct);
+}
+
+void pooprollers(){
+  // move top rollers back, bottom roller forward
+  TopRollers.spin(reverse, 100, pct);
+  BottomRollers.spin(forward, 100, pct);
+}
+
+void stoprollers(){
+  // stop roller motors
+  TopRollers.stop();
+  BottomRollers.stop();
+}
+
+void usercontrol(void) {
+  // User control code here, inside the loop
+  while (1) {
+    // This is the main execution loop for the user control program.
+    // Each time through the loop your program should update motor + servo
+    // values based on feedback from the joysticks.
+
+    // ........................................................................
+    // Insert user code here. This is where you use the joystick and button values to
+    // update your motors, etc.
+    // ........................................................................
+
+    axis3pos = Controller1.Axis3.position(percent); // get the driving position (in percent value)
+    axis1pos = Controller1.Axis1.position(percent); // get the turning position (in percent value)
+
+    /* axis3pos and axis1pos are technically vector measurements because they go from -100 to 100.
+       that means that the direction can change if the number is negative or positive.
+       either backwards or left (-100 to 0 exclusive) or forwards or right (0 exclusive to 100)
+
+       WE ARE NOT USING A DRIVETRAIN, DUE TO THE WAY WE HAVE DESIGNED THE FOUR MOTORS USING GEARS. 
+       IT IS DEFINITELY POSSIBLE BUT TOO OVERCOMPLICATED. 
+       for now we call each drive motor in a separate line.                                       */
+
+    // formula to figure out how the drive motors will move, based on the positions of the two joysticks. 
+    // keep calling the same function (drive_motors), pass in different values based on the positions
+    // this is so we can move the robot smoothly, instead of rigid movements based on differently-timed signals from both axes
+
+    drive_motors();
+
+    /* following code is for the buttons (rest of controller bindings)
+       two buttons for intakes (stop (L2) and start (R2))
+       three buttons for rollers (poop (L1), launch (R1), and stop (Up)) 
+
+       code for buttons is easy; the function is called when the button is pressed
+       since motor commands never stop until another function is called, then the code
+       for a button can just be a line long.                                           */
+
+    Controller1.ButtonL2.pressed(stopintakes);
+    Controller1.ButtonR2.pressed(startintakes);
+
+    Controller1.ButtonL1.pressed(pooprollers);
+    Controller1.ButtonR1.pressed(launchrollers);
+    Controller1.ButtonUp.pressed(stoprollers);
+
+    wait(20, msec); // Sleep the task for a short amount of time to
+                    // prevent wasted resources.
+  }
+}
+
+//
+// Main will set up the competition functions and callbacks.
+//
+int main() {
+  // Set up callbacks for autonomous and driver control periods.
+  Competition.autonomous(autonomous);
+  Competition.drivercontrol(usercontrol);
+
+  // Run the pre-autonomous function.
+  pre_auton();
+
+  // Prevent main from exiting with an infinite loop.
+  while (true) {
+    wait(100, msec);
+  }
+}
