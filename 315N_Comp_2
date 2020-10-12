@@ -1,0 +1,335 @@
+/*----------------------------------------------------------------------------*/
+/*                                                                            */
+/*    Module:       main.cpp                                                  */
+/*    Author:       VEX                                                       */
+/*    Created:      Thursday, September 26, 2020                              */
+/*    Description:  Competition Template                                      */
+/*                                                                            */
+/*----------------------------------------------------------------------------*/                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+
+// ---- START VEXCODE CONFIGURED DEVICES ----
+// Robot Configuration:
+// [Name]               [Type]        [Port(s)]
+// LeftFront            motor         9               
+// LeftBack             motor         15              
+// RightFront           motor         19              
+// RightBack            motor         8               
+// TopRollers           motor         13              
+// BottomRollers        motor         16              
+// LeftIntake           motor         2               
+// RightIntake          motor         1               
+// Controller1          controller                    
+// ---- END VEXCODE CONFIGURED DEVICES ---- 
+
+#include "vex.h"
+
+// ---- START VEXCODE CONFIGURED DEVICES ----
+// Robot Configuration:
+// [Name]               [Type]        [Port(s)]
+// LeftFront            motor         9               
+// LeftBack             motor         15              
+// RightFront           motor         19              
+// RightBack            motor         8               
+// TopRollers           motor         13              
+// BottomRollers        motor         16              
+// LeftIntake           motor         2               
+// RightIntake          motor         1               
+// Controller1          controller                    
+// ---- END VEXCODE CONFIGURED DEVICES ----
+#include <math.h>
+
+using namespace vex;
+
+const double ROT = M_PI*3.25; // how many inches is covered in one rotation/turn
+
+// A global instance of competition
+competition Competition;
+
+// define your global instances of motors and other devices here
+const double SENSE = 0.5; // sensitivity
+
+// I wanted to experiment with different types of speed functions as well.
+// If the speed equation is linear, then there will be more jerking but more consistency.
+// the degree constant will change the interval rate of speed based on a certain formula/function
+
+int DEGREE = 2;
+
+
+/*---------------------------------------------------------------------------*/
+/*                          Pre-Autonomous Functions                         */
+/*                                                                           */
+/*  You may want to perform some actions before the competition starts.      */
+/*  Do them in the following function.  You must return from this function   */
+/*  or the autonomous and usercontrol tasks will not be started.  This       */
+/*  function is only called once after the V5 has been powered on and        */
+/*  not every time that the robot is disabled.                               */
+/*---------------------------------------------------------------------------*/
+
+void pre_auton(void) {
+  // Initializing Robot Configuration. DO NOT REMOVE!
+  vexcodeInit();
+
+  // All activities that occur before the competition starts
+  // Example: clearing encoders, setting servo positions, ...
+}
+
+/*---------------------------------------------------------------------------*/
+/*                                                                           */
+/*                              Autonomous Task                              */
+/*                                                                           */
+/*  This task is used to control your robot during the autonomous phase of   */
+/*  a VEX Competition.                                                       */
+/*                                                                           */
+/*  You must modify the code to add your own robot specific commands here.   */
+/*---------------------------------------------------------------------------*/
+
+void move_for(int dist){
+  LeftFront.spinToPosition((dist/ROT), turns);
+  LeftBack.spinToPosition((dist/ROT), turns);
+  RightFront.spinToPosition((dist/ROT), turns);
+  RightBack.spinToPosition((dist/ROT), turns);
+
+}
+
+void autonomous(void) {
+  // ..........................................................................
+  // Insert autonomous user code here.
+
+
+  // run the rollers and launch the pre-load.
+  // this is the only code we are sure to run at Dublin (1 pt auton).
+  
+  TopRollers.spin(forward, 100, pct);      
+  BottomRollers.spin(forward, 100, pct);
+
+
+  // The rest of this code will be finalized after Dublin.
+
+  // Task P2, move back so that robot is parallel to ball in front.
+  //move_for(-17);
+
+  //LeftFront.spinFor(
+
+
+  
+
+
+  // ..........................................................................
+}
+
+/*--------------------------------------------------------------------------------*/
+/*                                                                                */
+/*                               User Control Task                                */
+/*                                                                                */
+/*   This task is used to control your robot during the user control phase of     */
+/*   a VEX Competition.                                                           */
+/*                                                                                */
+/*   BETWEEN THIS COMMENT AND THE USERCONTROL VOID ARE THE CONTROLLER FUNCTIONS.  */
+/*--------------------------------------------------------------------------------*/
+
+// INTAKES FUNCTIONS
+
+void startintakes(){
+  // move intakes
+  LeftIntake.spin(forward, 100, pct);
+  RightIntake.spin(forward, 100, pct);
+  // move the bottom rollers along with the intakes
+  //BottomRollers.spin(forward, 100, pct);
+
+  Controller1.Screen.clearLine();
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(0, 0);
+  Controller1.Screen.print("Intaking...");
+
+  //Controller1.rumble(rumbleShort);
+}
+
+void stopintakes(){
+  // stop intakes
+  LeftIntake.stop();
+  RightIntake.stop();
+  //BottomRollers.stop();
+
+  Controller1.Screen.clearLine();
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(0, 0);
+  Controller1.Screen.print("Intakes stopped.");
+}
+
+void reverseintakes(){
+  // reverse intakes (outtakes)
+  LeftIntake.spin(reverse, 100, pct);
+  RightIntake.spin(reverse, 100, pct);
+
+  Controller1.Screen.clearLine();
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(0, 0);
+  Controller1.Screen.print("Reversing intakes...");
+}
+
+// ROLLERS FUNCTIONS
+
+void formulate(){
+  // only move top rollers back for a small time
+  TopRollers.spinFor(reverse, 180, degrees);
+}
+
+void launchrollers(){
+  // move top rollers forward, bottom rollers forward
+  TopRollers.spin(forward, 100, pct);
+  BottomRollers.spin(forward, 100, pct);
+
+  // while the rollers launch the intakes move as well
+  LeftIntake.spin(forward, 100, pct);
+  RightIntake.spin(forward, 100, pct);
+
+  Controller1.Screen.clearLine();
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(0, 0);
+  Controller1.Screen.print("Rollers are launching");
+}
+
+void pooprollers(){
+  // move top rollers back, bottom roller forward
+  TopRollers.spin(reverse, 100, pct);
+  BottomRollers.spin(forward, 100, pct);
+
+  Controller1.Screen.clearLine();
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(0, 0);
+  Controller1.Screen.print("Rollers are pooping");
+}
+
+void stoprollers(){
+  // stop roller motors
+  TopRollers.stop();
+  BottomRollers.stop();
+
+  Controller1.Screen.clearLine();
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(0, 0);
+  Controller1.Screen.print("Rollers stopped.");
+}
+
+void forcequit(){
+  // stop all robot motors
+
+  LeftFront.stop();
+  LeftBack.stop();
+  RightFront.stop();
+  RightBack.stop();
+
+  TopRollers.stop(); 
+  BottomRollers.stop();
+
+  LeftIntake.stop();
+  RightIntake.stop();
+
+  Controller1.Screen.clearLine();
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(2, 3);
+  Controller1.Screen.print("FORCE QUIT");
+  Controller1.rumble("-----");
+
+
+}
+
+
+int exponent(double inp, int expo) {
+  int intern = pow(inp/100.0, expo)*100.0;
+  if(inp < 0){
+    intern = - (abs(intern));
+  }
+  return intern; 
+
+}
+
+void usercontrol(void) {
+  // User control code here, inside the loop
+  while (1) {
+    // This is the main execution loop for the user control program.
+    // Each time through the loop your program should update motor + servo
+    // values based on feedback from the joysticks.
+
+    // ........................................................................
+    // Insert user code here. This is where you use the joystick and button values to
+    // update your motors, etc.
+    // ........................................................................
+
+    int drivePos = Controller1.Axis3.position(percent); // get the driving position (in percent value)
+    int turnPos = exponent(Controller1.Axis1.position(percent), DEGREE); // get the turning position (in percent value)
+
+    // use the SCALE constant to reduce the impact of the turn
+    float scaledTurnPos = ((turnPos * 100) * SENSE) / 100;
+    float leftMtrVals = (drivePos + scaledTurnPos);
+    float rightMtrVals = -(scaledTurnPos - drivePos);
+
+    // motor threshold
+
+    if(leftMtrVals > 100){
+        leftMtrVals = 100;
+    }
+    if(leftMtrVals < -100){
+        leftMtrVals = -100;
+    }
+    if(rightMtrVals > 100){
+        rightMtrVals = 100;
+    }
+    if(rightMtrVals < -100){
+        rightMtrVals = -100;
+    }
+
+    LeftFront.spin(forward, leftMtrVals, pct);
+    LeftBack.spin(forward, leftMtrVals, pct);
+    RightFront.spin(forward, rightMtrVals, pct);
+    RightBack.spin(forward, rightMtrVals, pct);
+
+    /* drivepos and turnpos are technically vector measurements because they go from -100 to 100.
+       that means that the direction can change if the number is negative or positive.
+       either backwards or left (-100 to 0 exclusive) or forwards or right (0 exclusive to 100)
+
+       following code is for the buttons (rest of controller bindings)
+       three buttons for intakes (stop (L2), start (R2), and reverse (Y))
+       three buttons for rollers (poop (L1), launch (R1), and stop (Right)) 
+
+       code for buttons is easy; the function is called when the button is pressed
+       since motor commands never stop until another function is called, then the code
+       for a button can just be a line long.                                           */
+
+    Controller1.ButtonL2.pressed(stopintakes);
+    Controller1.ButtonR2.pressed(startintakes);
+    Controller1.ButtonY.pressed(reverseintakes);
+
+    Controller1.ButtonA.pressed(pooprollers);
+    Controller1.ButtonR1.pressed(launchrollers);
+    Controller1.ButtonL1.pressed(stoprollers);
+
+    Controller1.ButtonX.pressed(formulate);
+
+    // one button as a "force quit"
+    // if Rishvik is in panic or cracked under pressure he can use this button as a shortcut
+    // used to STOP ALL MOTORS
+
+    Controller1.ButtonB.pressed(forcequit);
+
+    wait(1, msec); // Sleep the task for a short amount of time to
+                    // prevent wasted resources.
+  }
+}
+
+//
+// Main will set up the competition functions and callbacks.
+//
+int main() {
+  // Set up callbacks for autonomous and driver control periods.
+  Competition.autonomous(autonomous);
+  Competition.drivercontrol(usercontrol);
+
+  // Run the pre-autonomous function.
+  pre_auton();
+
+  // Prevent main from exiting with an infinite loop.
+  while (true) {
+    wait(100, msec);
+  }
+}
