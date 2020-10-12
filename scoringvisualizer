@@ -218,7 +218,7 @@ def check_mouse_click(event):
             for k in range(3):
                 if (x > 200*i + 105  and x < 200*i + 180):
                     if (y > 270*j + 22.5 + 75*k and y < 270*j + 97.5 + 75*k):           
-                        change_ball(3*i + j, k)
+                        change_ball(3*j + i, k)
 
     # refresh in the end
     draw_grid()
