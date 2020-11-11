@@ -181,8 +181,6 @@ def draw():
     else:
         scores_canvas.create_rectangle(565, 848, 720, 872, width=2, fill="white")
 
-    print(is_auton_red, is_auton_blue, is_auton_tie)
-
     scores_canvas.create_rectangle(742.5, 845, 1170, 875, width=2, fill="grey90")
     scores_canvas.create_text(875, 860, text="RED       " + str(red_total), font=SCORE_FONT, fill="red", anchor=E)
     scores_canvas.create_text(950, 860, text="-", font=SCORE_FONT, fill="black")
