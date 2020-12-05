@@ -1,0 +1,170 @@
+from tkinter import *
+from math import floor
+
+master = Tk()
+
+canvas = Canvas(master, height=600, width=800, highlightthickness=0, bd=0, bg="white")
+canvas.grid(row=3, column=1)
+
+linex = Canvas(master, height=10, width=800, highlightthickness=0, bd=0, bg="white")
+liney = Canvas(master, height=600, width=10, highlightthickness=0, bd=0, bg="white")
+
+# slider vars
+pvar = IntVar()
+ivar = DoubleVar()
+dvar = IntVar()
+ticksvar = IntVar()
+ilimvar = IntVar()
+dpropvar = IntVar()
+
+MSEC = 2
+VOLTAGE_RATE = 10
+VOLTAGE_MIN = 3000
+MSEC_INTERVAL = 50
+TICK_INTERVAL = 100
+
+def get_rpm(mv):
+    amv = abs(mv)
+    if amv <= 1500:
+        finalrpm = 0
+    else:
+        finalrpm = mv * 1/36
+
+    return finalrpm
+
+def get_ticks_traveled(mv):
+    rpm = get_rpm(mv)
+    ticks = (rpm*(0.002/60)) * 900
+    return ticks
+    
+def pid(p, i, d, ticks, ilim, dprop):
+    error = 0
+    prev_error = 0
+    cur_ticks = 0
+    integral = 0
+    derivative = 0
+    prop_pct = 0
+    prev_prop_pct = 0
+    prev_ticks = 0
+    msec = 0
+    tickspoints = []
+    rpmpoints = []
+    finalvoltpoints = []
+    prev_volt = 0
+
+    # linex and liney drawing
+    liney.create_line(5, 600, 5, 0, arrow="last", width=2)
+    linex.create_line(0, 5, 800, 5, arrow="last", width=2)
+
+    while abs(cur_ticks) < abs(ticks):
+        error = abs(ticks) - abs(cur_ticks)
+        prop_pct = ( error / abs(ticks) ) * 100
+
+        if prev_prop_pct == 0:
+            derivative = 0
+        else:
+            derivative = ( (prop_pct - prev_prop_pct)) * 100
+        #print(derivative)   
+        integral += error
+        #print("Cur Ticks = " + str(cur_ticks))
+        #print("Error = " + str(error))
+        #print("Integral = " + str(integral))
+        #print()
+        if i*integral > ilim:
+            integral = ilim/i
+        #if error > dprop:
+         #   error = dprop
+
+        #print("Prop pct = " + str(prop_pct))
+        #print("Final integral = " + str(integral))
+        final_volt =   ( (p*prop_pct) + (i*integral) + (d*derivative) )
+
+        if final_volt-prev_volt > VOLTAGE_RATE * MSEC:
+            if (VOLTAGE_RATE * MSEC) + prev_volt < VOLTAGE_MIN:
+                final_volt = VOLTAGE_MIN
+            else:
+                final_volt = (VOLTAGE_RATE * MSEC) + prev_volt
+        
+
+        #print("Final volt = " + str(final_volt))
+
+        prev_volt = final_volt
+        prev_prop_pct = prop_pct
+        prev_error = error
+        prev_ticks = cur_ticks
+        msec += MSEC
+        cur_ticks += get_ticks_traveled(final_volt)
+        #print(cur_ticks)
+        rpm = get_rpm(final_volt)
+
+        tickspoints.append(600 - ((600/ticks) * cur_ticks))
+        rpmpoints.append(600 - ((600/(1000/3)) * rpm))
+        finalvoltpoints.append(600 - ((600/12000) * final_volt))
+        
+
+    #print("here")
+    ticksplot = []
+    rpmplot = []
+    finalvoltplot = []
+    
+    for x in range(int(msec/MSEC)):
+        ticksplot.append(((800/msec) * (x*MSEC), tickspoints[x]))
+        rpmplot.append(((800/msec) * (x*MSEC), rpmpoints[x]))
+        finalvoltplot.append(((800/msec) * (x*MSEC), finalvoltpoints[x]))
+
+    mintervals = floor(msec/MSEC_INTERVAL)
+    tintervals = int(ticks/TICK_INTERVAL)
+
+    print("Msec %d\n" % msec)
+
+    mint_dist = 800/msec
+    tint_dist = 600/ticks
+    
+    for x in range(mintervals):
+        linex.create_line(mint_dist*MSEC_INTERVAL*(x+1), 0, mint_dist*MSEC_INTERVAL*(x+1), 10)
+
+    for x in range(tintervals):
+        liney.create_line(0, 600-(tint_dist*TICK_INTERVAL*x), 10, 600-(tint_dist*TICK_INTERVAL*x))
+    
+
+    canvas.create_polygon(ticksplot, ticksplot[::-1], outline="red")
+    canvas.create_polygon(finalvoltplot, finalvoltplot[::-1], outline="blue")
+        
+        
+
+def update_canvas(event):
+    canvas.delete('all')
+    linex.delete('all')
+    liney.delete('all')
+    pid(pvar.get(), ivar.get(), dvar.get(), ticksvar.get(), ilimvar.get(), dpropvar.get())
+        
+# widgets
+pslider = Scale(master, label="P:", variable = pvar, from_=0, to=100, orient=HORIZONTAL, length=800, width=20, command=update_canvas)
+islider = Scale(master, label="I:", variable = ivar, from_=0.050, to=1, resolution=0.025, orient=HORIZONTAL, length=800, width=20, command=update_canvas)
+dslider = Scale(master, label="D:", variable = dvar, from_=0, to=100, orient=HORIZONTAL, length=800, width=20, command=update_canvas)
+ticksslider = Scale(master, label="Ticks:", variable = ticksvar, from_=100, to=5000, resolution=100, orient=VERTICAL, length=600, width=20, command=update_canvas)
+ilimitslider = Scale(master, label="I Lim:", variable = ilimvar, from_=1500, to=20000, resolution=250, orient=VERTICAL, length=600, width=20, command=update_canvas)
+dpropslider = Scale(master, label="D Prop:", variable = dpropvar, from_=0, to=50000, resolution=250, orient=VERTICAL, length=600, width=20, command=update_canvas)
+
+# slider setting
+pslider.set(30)
+islider.set(1)
+dslider.set(0)
+ticksslider.set(500)
+ilimitslider.set(2000)
+dpropslider.set(50000)
+
+# widget placement
+liney.grid(row=3, column=0)
+linex.grid(row=4, column=1)
+pslider.grid(row=0, column=1)
+islider.grid(row=1, column=1)
+dslider.grid(row=2, column=1)
+ticksslider.grid(row=3, column=2)
+ilimitslider.grid(row=3, column=3)
+dpropslider.grid(row=3, column=4)
+
+
+
+
+mainloop()
