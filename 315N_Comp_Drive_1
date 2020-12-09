@@ -1,0 +1,831 @@
+/*----------------------------------------------------------------------------*/
+/*                                                                            */
+/*    Module:       main.cpp                                                  */
+/*    Author:       Rohan Kosalge                                             */
+/*    Created:      Thursday, September 26, 2020                              */
+/*    Description:  Competition Template                                      */
+/*                                                                            */
+/*----------------------------------------------------------------------------*/                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+
+// ---- START VEXCODE CONFIGURED DEVICES ----
+// Robot Configuration:
+// [Name]               [Type]        [Port(s)]
+// leftFront            motor         9               
+// leftBack             motor         15              
+// rightFront           motor         19              
+// rightBack            motor         8               
+// TopRollers           motor         13              
+// BottomRollers        motor         16              
+// leftIntake           motor         2               
+// rightIntake          motor         3               
+// Controller1          controller                    
+// InertialSensor       inertial      6               
+// LineTrackerA         line          A               
+// LineTrackerB         line          B               
+// LineTrackerC         line          C               
+// ---- END VEXCODE CONFIGURED DEVICES ----
+#include "vex.h"
+#include <string.h>
+#include <math.h>
+
+using namespace vex;
+
+// A global instance of competition
+competition Competition;
+
+motor_group leftDrive(leftBack, leftFront);
+motor_group rightDrive(rightBack, rightFront);
+motor_group intakes(leftIntake, rightIntake);
+
+motor_group frontDrive(leftFront, rightFront);
+motor_group backDrive(leftBack, rightBack);
+
+smartdrive turn_train(leftDrive, rightDrive, InertialSensor, 10.21, 13, 9, inches, 5/3);
+smartdrive drive_train(backDrive, frontDrive, InertialSensor, 10.21, 13, 9, inches, 5/3);
+
+// define your global instances of motors and other devices here
+const double XSENSE = 0.60; // driving sensitivity
+const double YSENSE = 0.35; // turning sensitivity
+
+const double DRIVE_VELOCITY = 20.00;
+const double TURN_VELOCITY = 10.00;
+
+const double DRIVEP = 50.0;
+const double DRIVEI = 0.001;
+const double DRIVED = 0.5;
+//const double TDRIVEP = 0.145;
+//const double TDRIVEI = 0.0089;
+//const double TDRIVED = 0.07;
+const int NUMDRIVEMOTORS = 4;
+const long DRIVEINTEGRALLIMIT = 2000000;
+
+void assignDriveMotorsVoltage(double leftSide, double rightSide){
+  leftFront.spin(forward, leftSide, vex::voltageUnits::mV);
+  leftBack.spin(forward, leftSide, vex::voltageUnits::mV);
+  rightFront.spin(forward, rightSide, vex::voltageUnits::mV);
+  rightBack.spin(forward, rightSide, vex::voltageUnits::mV);
+}
+
+double getAverageVoltage(){
+  return ( fabs(leftFront.voltage(vex::voltageUnits::mV)) + fabs(leftBack.voltage(vex::voltageUnits::mV))
+           + fabs(rightFront.voltage(vex::voltageUnits::mV)) + fabs(rightBack.voltage(vex::voltageUnits::mV)) ) / NUMDRIVEMOTORS;
+}
+
+double getAverageTicks(){
+  return ( fabs(leftFront.position(vex::rotationUnits::raw)) + fabs(leftFront.position(vex::rotationUnits::raw))
+               + fabs(leftFront.position(vex::rotationUnits::raw)) + fabs(leftFront.position(vex::rotationUnits::raw)) ) / NUMDRIVEMOTORS;
+}
+
+void resetMotors(){
+  leftFront.resetPosition();
+  leftBack.resetPosition();
+  rightFront.resetPosition();
+  rightBack.resetPosition();
+}
+
+void stopMotors(){
+  assignDriveMotorsVoltage(0, 0);
+}
+
+void drivePID(double target_ticks, double head){
+  long integral; 
+  long derivative;
+  long error; 
+  long prev_error;
+  double final_volt = 3000.0;
+  long cur_ticks;
+
+  error = 0;
+  prev_error = 0;
+  cur_ticks = 0;
+  integral = 0;
+  derivative = 0;
+
+  resetMotors();
+  while(cur_ticks < target_ticks){
+    
+    error = target_ticks - cur_ticks;
+    derivative = error - prev_error;
+    integral = integral + error;
+
+    if(integral > DRIVEINTEGRALLIMIT){
+      integral = DRIVEINTEGRALLIMIT;
+    }
+
+    final_volt = (DRIVEP * error) + (DRIVEI * integral) + (DRIVED * derivative);
+    assignDriveMotorsVoltage(final_volt, final_volt);
+
+    // Controller1.Screen.clearScreen();
+    // Controller1.Screen.setCursor(0, 0);
+    // Controller1.Screen.print("E=%d, D=%d, I=%d", error, derivative, integral);
+    // Controller1.Screen.newLine();
+    // Controller1.Screen.setCursor(2, 0);
+    // Controller1.Screen.print("Volt = %f", final_volt);
+    // Controller1.Screen.newLine();
+    // Controller1.Screen.setCursor(3, 0);
+    // Controller1.Screen.print("Real Volt=%f", leftFront.voltage());
+
+    prev_error = error;
+    vex::task::sleep(50);
+    cur_ticks = getAverageTicks();
+
+    //Controller1.Screen.clearScreen();
+    //Controller1.Screen.clearLine();
+    //Controller1.Screen.print(cur_ticks);
+  }
+  stopMotors();
+}
+
+void PID_test(){
+  //drivePID(1000.0, 0);
+  //assignDriveMotorsVoltage(1000, 1000);
+  //leftFront.spin(forward, 1000, vex::voltageUnits::mV);
+
+ 
+    //rightFront.spin(forward, 50000, vex::voltageUnits::mV);
+    //rightBack.spin(forward, 50000, vex::voltageUnits::mV);
+    while(true){
+    rightFront.spin(forward, 100, pct);
+    rightBack.spin(forward, 100, pct);
+    TopRollers.spin(forward, 100, pct);
+    wait(100, msec);
+    }
+    //leftIntake.spin(forward, 100, pct);
+    //TopRollers.spin(forward, 50000, vex::voltageUnits::mV);
+    //wait(5000, msec);
+    //Controller1.Screen.clearLine();
+    //Controller1.Screen.setCursor(0, 0);
+    //Controller1.Screen.print("Real volt:%f", TopRollers.voltage());
+    //vex::task::sleep(5000);
+    //wait(5000, msec);
+
+  
+}
+
+// rollers booleans
+// these are used for the rollers controller bindings. 
+// one boolean to check for launching and one boolean to check for pooping.
+
+bool is_launching = false;
+bool is_pooping = false;
+
+// constants for reflectivity percentage
+// one for white (the taped line on the field)
+// one for grey (the field element color)
+
+const int WHITE_REFLECT_PCT = 4;
+const int GREY_REFLECT_PCT = 42;
+
+// the threshold variable is the average of these two percentages
+// it will determine whether the surface is white or grey
+int thresh = (WHITE_REFLECT_PCT + GREY_REFLECT_PCT);
+
+//const double INCHES_PER_MOTOR_ROT = 3.35 * (22/7) * (5/3);
+//const int TICKS_PER_MOTOR_ROT = 900;
+
+//const double INCHES_PER_TICKS = INCHES_PER_MOTOR_ROT / TICKS_PER_MOTOR_ROT ;
+
+//const double TICKS_PER_INCH = 3.25 * (22/7) * (5/3);
+
+
+/*---------------------------------------------------------------------------*/
+/*                          Pre-Autonomous Functions                         */
+/*                                                                           */
+/*  You may want to perform some actions before the competition starts.      */
+/*  Do them in the following function.  You must return from this function   */
+/*  or the autonomous and usercontrol tasks will not be started.  This       */
+/*  function is only called once after the V5 has been powered on and        */
+/*  not every time that the robot is disabled.                               */
+/*---------------------------------------------------------------------------*/
+
+void pre_auton(void) {
+  // Initializing Robot Configuration. DO NOT REMOVE!
+  vexcodeInit();
+
+  // calibrate the inertial sensor
+  InertialSensor.calibrate();
+  while(InertialSensor.isCalibrating()){
+    wait(100, msec);
+  }
+
+  // All activities that occur before the competition starts
+  // Example: clearing encoders, setting servo positions, ...
+}
+
+/*---------------------------------------------------------------------------*/
+/*                              Autonomous Task                              */
+/*                                                                           */
+/*  This task is used to control your robot during the autonomous phase of   */
+/*  a VEX Competition.                                                       */
+/*                                                                           */
+/*  You must modify the code to add your own robot specific commands here.   */
+/*---------------------------------------------------------------------------*/
+
+// line tracker functions
+int compare(int prevVal, int val, int thresh){
+  int signal;
+  // this function determines a change of color detection in a certain line sensor
+  // signal = 0 (if no change)
+  // signal = 1 (if changed from grey to white)
+  // signal = 2 (if changed from white to grey)
+
+  if(val <= thresh && prevVal > thresh){
+    signal = 1;
+  }else if(val > thresh && prevVal <= thresh){
+    signal = 2;
+  }else{
+    signal = 0;
+  }
+  return signal;
+}
+
+void reset_motors(){
+  leftFront.resetPosition();
+  leftBack.resetPosition();
+  rightFront.resetPosition();
+  rightBack.resetPosition();
+}
+
+void controller_screen_update(int cursorX, int cursorY, std::string msg, bool rumble){
+  // call this function after every robot function
+  // so that the driver knows what is going on
+
+  Controller1.Screen.clearLine();
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(cursorX, cursorY);
+  //Controller1.Screen.print(msg);
+  if(rumble==true){
+    Controller1.rumble("-----");
+  }
+}
+
+// manual auton functions
+void move_for_ticks(double ticks){
+  reset_motors();
+
+  if(ticks > 0){
+    drive_train.drive(forward);
+  }else{
+    drive_train.drive(reverse);
+  }
+  double ticks_driven = 0;
+  if(ticks < 0){
+      ticks = -ticks;
+    }
+
+  do{
+    ticks_driven = leftFront.position(vex::rotationUnits::raw);
+
+    if(ticks_driven < 0){
+      ticks_driven = -ticks_driven;
+    }
+
+    Controller1.Screen.print("Ticks: %f", ticks_driven);
+    Controller1.Screen.newLine();
+  }while(ticks_driven < ticks);
+  drive_train.stop();
+}
+
+void move_for(double dist){
+
+  drive_train.driveFor(fwd, 0.1*dist, inches, DRIVE_VELOCITY*0.5, vex::velocityUnits::pct, true);
+  drive_train.driveFor(fwd, 0.1*dist, inches, DRIVE_VELOCITY*0.75, vex::velocityUnits::pct, true);
+  drive_train.driveFor(fwd, 0.8*dist, inches, DRIVE_VELOCITY, vex::velocityUnits::pct, true);
+}
+
+void new_move_for(double dist){
+
+  for(int x=0; x<10; x++){
+    drive_train.driveFor(fwd, 0.1*dist, inches, DRIVE_VELOCITY*(0.1*(x+1)), vex::velocityUnits::pct, true);
+  }
+
+  //drive_train.driveFor(fwd, 0.1*dist, inches, DRIVE_VELOCITY*0.5, vex::velocityUnits::pct, true);
+  //drive_train.driveFor(fwd, 0.1*dist, inches, DRIVE_VELOCITY*0.75, vex::velocityUnits::pct, true);
+  //drive_train.driveFor(fwd, 0.8*dist, inches, DRIVE_VELOCITY, vex::velocityUnits::pct, true);
+}
+
+void turn_for(double deg){
+  turn_train.turnFor(right, deg, degrees, TURN_VELOCITY, vex::velocityUnits::pct, true);
+}
+
+// automatic auton functions
+void inertial_turn(int deg, int dir){ 
+  // direction = 0 : turn right
+  // direction = 1 : turn left
+  // vector specified function
+
+  if(dir == 0){
+    turn_train.turn(right);
+  }else if(dir == 1){
+    turn_train.turn(left);
+  }
+  waitUntil(InertialSensor.rotation(degrees) >= deg);
+  turn_train.stop();
+}
+
+void move_until_change(int vel){
+  // robot moves forward until at least one line tracker changes values
+  // only the velocity is passed by the user, we know every other variable
+
+  int valA = LineTrackerA.value(pct);
+  int valB = LineTrackerB.value(pct);
+  int valC = LineTrackerC.value(pct);
+
+  // for now they are the same value, after the first iteration
+  // they will store the values from the previous loop
+  int prevValA = valA; int prevValB = valB; int prevValC = valC;
+
+  // stop the loop when this boolean is true
+  bool change_detected = false;
+
+  while(!change_detected){
+    drive_train.drive(forward);
+
+    valA = LineTrackerA.value(pct);
+    valB = LineTrackerB.value(pct);
+    valC = LineTrackerC.value(pct);
+
+    // compare the current values with the previous values
+    // if even one of them changed, then stop
+
+    int signalA = compare(prevValA, valA, thresh);
+    int signalB = compare(prevValB, valB, thresh);
+    int signalC = compare(prevValC, valC, thresh);
+
+    // change previous values to current values
+    // the current values will changed at the beginning of next loop
+
+    if(signalA != 0 || signalB != 0 || signalC != 0){
+      change_detected = true;
+    }
+  }
+  // stop all drive motors in the end
+  drive_train.stop();
+}
+
+void launch_rollers(double seconds){
+  TopRollers.spin(forward, 100, pct);
+  BottomRollers.spin(forward, 100, pct);
+  wait(seconds, sec);
+  TopRollers.stop();
+  BottomRollers.stop();
+}
+
+void run_intakes(){
+  intakes.spin(forward, 100, pct);
+  controller_screen_update(0, 0, "Intaking...", false);
+}
+
+void stop_intakes(){
+  // stop intakes and bottom rollers (if they were running)
+  intakes.stop();
+  BottomRollers.stop();
+  controller_screen_update(0, 0, "Intakes stopped.", false);
+}
+
+void special_run_intakes(){
+  intakes.spin(forward, 100, pct);
+  BottomRollers.spin(forward, 100, pct);
+  controller_screen_update(0, 0, "Intaking...", false);
+}
+
+void formulate(){
+  InertialSensor.calibrate();
+  // only move top rollers back for a small time
+  TopRollers.spin(reverse, 20, pct);
+  wait(0.25, sec);
+  TopRollers.stop();
+}
+
+void skills(){
+
+  // USING TICKS
+
+  formulate();
+  special_run_intakes();
+  move_for_ticks(498.66667);
+  //wait(0.5, sec);
+  stop_intakes();
+  turn_for(105.615);
+  move_for_ticks(1028.66667);
+  launch_rollers(1.75);
+  move_for_ticks(-1520);
+  turn_for(105.735);
+  move_for_ticks(750.33333);
+  special_run_intakes();
+  launch_rollers(1.75);
+  stop_intakes();
+  move_for_ticks(-567);
+  turn_for(33.81733333);
+  special_run_intakes();
+  move_for_ticks(2456.66667);
+  wait(1.5, sec);
+  stop_intakes();
+  turn_for(-21.92233333);
+  move_for_ticks(1524);
+  launch_rollers(2.5);
+  move_for_ticks(-1158);
+  turn_for(89.78033333);
+  special_run_intakes();
+  move_for_ticks(2173.66667);
+  stop_intakes();
+  turn_for(-51.88866667);
+  move_for_ticks(305);
+  special_run_intakes();
+  launch_rollers(1.75);
+  stop_intakes();
+
+
+
+  // formulate();
+  // special_run_intakes();
+  // move_for_ticks(1476.33333);
+  // stop_intakes();
+  // turn_for(124);
+  // move_for_ticks(1465);
+  // wait(500, msec);
+  // launch_rollers(0.40);
+  // move_for_ticks(-568.33333);
+  // turn_for(131.45233333);
+  // move_for_ticks(2163.33333);
+  // turn_for(-94.476);
+  // move_for_ticks(960.66667);
+  // wait(500, msec);
+  // launch_rollers(1);
+  // move_for_ticks(-204);
+  // turn_for(94.85866667);
+  // special_run_intakes();
+  // move_for_ticks(2332.33333);
+  // stop_intakes();
+  // turn_for(-83.035);
+  // move_for(863.66667);
+  // wait(500, msec);
+  // launch_rollers(1);
+
+  // move_for(-200);
+
+
+  // // Tower 7
+  // formulate();
+  // special_run_intakes();
+  // move_for(16.75);
+  // stop_intakes();
+  // turn_for(133);
+  // move_for(17.5);
+  // launch_rollers(0.5);
+  // wait(0.5, sec);
+
+  // // Tower 4
+  // move_for(-5);
+  // turn_for(135);
+  // move_for(29);
+  // turn_for(-89);
+  // move_for(5);
+  // launch_rollers(1.5);
+  // wait(0.5, sec);
+
+  // // Tower 1
+  // move_for(-5);
+  // turn_for(90);
+  // special_run_intakes();
+  // move_for(30.72);
+  // stop_intakes();
+  // turn_for(-45);
+  // move_for(7);
+  // launch_rollers(1);
+  // wait(0.5, sec);
+  
+  // move_for(-7);
+  // turn_for(135);
+  // special_run_intakes();
+  // move_for(30.72);
+  // stop_intakes();
+  // turn_for(-90);
+  // move_for(5);
+  // launch_rollers(1);
+  // wait(0.5, sec);
+
+  // move_for(-5);
+  // turn_for(180);
+  // special_run_intakes();
+  // move_for(15.36);
+  // stop_intakes();
+  // turn_for(-90);
+  // move_for(15.36);
+  // turn_for(-45);
+  // move_for(35);
+  // launch_rollers(1);
+  // wait(0.5, sec);
+
+  // move_for(-5);
+  // wait(1, sec);
+}
+
+void red_auton(){
+  formulate();
+  move_for(14);
+  turn_for(128);
+  special_run_intakes();
+  move_for(13);
+  launch_rollers(0.5);
+  wait(500, msec);
+
+  move_for(-5);
+  stop_intakes();
+  turn_for(135);
+  move_for(29);
+  turn_for(-89);
+  move_for(5);
+  launch_rollers(2);
+  move_for(-2.25);
+
+  // turn_for(90);
+  // move_for(26);
+  // turn_for(-45);
+  // special_run_intakes();
+  // move_for(5);
+  // launch_rollers(2);
+  // stop_intakes();
+}
+
+void blue_auton(){
+  formulate();
+  move_for(14);
+  turn_for(128);
+  special_run_intakes();
+  move_for(11.5);
+  launch_rollers(0.5);
+  wait(500, msec);
+
+  move_for(-10);
+  stop_intakes();
+  turn_for(143);
+  move_for(27);
+  turn_for(-75);
+  move_for(5);
+  launch_rollers(2);
+  move_for(-2.25);
+
+  // turn_for(90);
+  // move_for(26);
+  // turn_for(-45);
+  // special_run_intakes();
+  // move_for(5);
+  // launch_rollers(2);
+  // stop_intakes();
+}
+
+
+void flipped_auton(){
+  formulate();
+  move_for(14);
+  turn_for(-128);
+  special_run_intakes();
+  move_for(13);
+  launch_rollers(0.5);
+  wait(500, msec);
+
+  move_for(-5);
+  stop_intakes();
+  turn_for(-135);
+  move_for(29);
+  turn_for(89);
+  move_for(5);
+  launch_rollers(2);
+  move_for(-2.25);
+}
+
+void autonomous(void) {
+  // ..........................................................................
+  // Insert autonomous user code here.
+
+  // move_for(4.5);             // P1: Moves the robot into the corner tower.
+  // launch_rollers(2);         // F1: Launches the pre-load into the corner tower.
+  // move_for(-4.5);            // P2: Moves the robot back to the starting position.
+  // turn_for(90);              // P3: Turns the robot so that it is facing forward.
+  // run_intakes();             
+  // move_until_change(50);     // P4: Moves the robot until it detects the white line.
+  // stop_intakes();
+  // turn_for(90);              // P5: Turns the robot so that it is facing right.
+  // move_until_change(50);     // P6: Moves the robot until it detects the double lines. 
+  // turn_for(90);              // P7: Turns the robot so that it is facing the edge tower.
+  // move_for(2.5);             // P8: Moves the robot into the edge tower.
+  // launch_rollers(2);         // F2: Launches the collected ball into the edge tower. 
+  // move_for(-2.5);            // P9: Moves the robot back to P7.
+  // turn_for(-90);            // P10: Turns the robot left so that it faces right.
+  // run_intakes();            
+  // move_for(48);             // P11: Moves the robot 2 tiles, should be close to corner.
+  // stop_intakes();
+  // turn_for(45);             // P12: Turns the robot so that it faces the corner tower.
+  // move_for(11.5);           // P13: Moves the robot to the corner tower.
+  // launch_rollers(5);         // F3: Launches the collected ball into the corner tower. 
+  //                                 //Launch for extra time just in case.
+
+
+  //launch_rollers(2);
+  // turn_for(90);
+  // run_intakes();
+  // move_for(16.375);
+  // stop_intakes();
+  // turn_for(90);
+  // move_for(49.875);
+  // turn_for(90);
+  // move_for(1.875);
+  // launch_rollers(2);
+  // move_for(-1.875);
+  // turn_for(-90);
+  // run_intakes();
+  // move_for(90);
+  // stop_intakes();
+  // turn_for(45);
+  // move_for(1.875);
+  // launch_rollers(5);
+
+  //red_auton();
+  skills();
+  //flipped_auton();
+
+
+
+  
+
+  
+
+
+
+
+  // ..........................................................................
+}
+
+/*--------------------------------------------------------------------------------*/
+/*                                                                                */
+/*                               User Control Task                                */
+/*                                                                                */
+/*   This task is used to control your robot during the user control phase of     */
+/*   a VEX Competition.                                                           */
+/*                                                                                */
+/*   BETWEEN THIS COMMENT AND THE USERCONTROL VOID ARE THE CONTROLLER FUNCTIONS.  */
+/*--------------------------------------------------------------------------------*/
+
+// INTAKES FUNCTIONS
+
+void reverse_intakes(){
+  // reverse intakes (outtakes)
+  intakes.spin(reverse, 100, pct);
+  controller_screen_update(0, 0, "Reversing intakes...", false);
+}
+
+// ROLLERS FUNCTIONS
+
+void launchrollers(){
+  // move top rollers forward, bottom rollers forward
+  TopRollers.spin(forward, 100, pct);
+  BottomRollers.spin(forward, 100, pct);
+
+  // while the rollers launch the intakes move as well
+  //LeftIntake.spin(forward, 100, pct);
+  //RightIntake.spin(forward, 100, pct);
+
+  Controller1.Screen.clearLine();
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(0, 0);
+  Controller1.Screen.print("Rollers are launching");
+}
+
+void pooprollers(){
+  // move top rollers back, bottom roller forward
+  TopRollers.spin(reverse, 100, pct);
+  BottomRollers.spin(forward, 100, pct);
+  
+  Controller1.Screen.clearLine();
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(0, 0);
+  Controller1.Screen.print("Rollers are pooping");
+}
+
+void forcequit(){
+  // stop all robot motors
+  drive_train.stop();
+  turn_train.stop();
+  TopRollers.stop(); 
+  BottomRollers.stop();
+  intakes.stop();
+  controller_screen_update(2, 3, "FORCE QUIT", true);
+}
+
+void stoprollers(){
+  TopRollers.stop();
+  BottomRollers.stop();
+}
+
+void gyrolog(){
+  // list all gyro stats on the controller and then reset the gyro positions. 
+
+  double gyro_heading = InertialSensor.heading(degrees);
+  double ticks = leftFront.position(vex::rotationUnits::raw);
+  //double inches = ticks * INCHES_PER_TICKS;
+
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(0, 0);
+
+  Controller1.Screen.print("Head: %f", gyro_heading);
+  Controller1.Screen.newLine();
+  Controller1.Screen.print("Ticks: %f", ticks);
+  Controller1.Screen.newLine();
+  //Controller1.Screen.print("Inches: %f", inches);
+
+  InertialSensor.setHeading(0, degrees);
+  reset_motors();
+
+}
+
+void usercontrol(void) {
+  // User control code here, inside the loop
+  while (1) {
+    // This is the main execution loop for the user control program.
+    // Each time through the loop your program should update motor + servo
+    // values based on feedback from the joysticks.
+
+    // ........................................................................
+    // Insert user code here. This is where you use the joystick and button values to
+    // update your motors, etc.
+    // ........................................................................
+
+    int drivePos = Controller1.Axis3.position(percent) * XSENSE; // get the driving position (in percent value)
+    int turnPos = Controller1.Axis1.position(percent) * YSENSE;  // get the turning position (in percent value)
+
+    // use the SCALE constant to reduce the impact of the turn
+    float leftMtrVals = (drivePos + turnPos);
+    float rightMtrVals = -(turnPos - drivePos);
+
+    // motor threshold
+
+    if(leftMtrVals > 100){
+        leftMtrVals = 100;
+    }
+    if(leftMtrVals < -100){
+        leftMtrVals = -100;
+    }
+    if(rightMtrVals > 100){
+        rightMtrVals = 100;
+    }
+    if(rightMtrVals < -100){
+        rightMtrVals = -100;
+    }
+
+    leftDrive.spin(forward, leftMtrVals, pct);
+    rightDrive.spin(forward, rightMtrVals, pct);
+
+    /* drivepos and turnpos are technically vector measurements because they go from -100 to 100.
+       that means that the direction can change if the number is negative or positive.
+       either backwards or left (-100 to 0 exclusive) or forwards or right (0 exclusive to 100)
+
+       following code is for the buttons (rest of controller bindings)
+       three buttons for intakes (stop (L2), start (R2), and reverse (Y))
+       three buttons for rollers (poop (L1), launch (R1), and stop (Right)) 
+       one extra button for flipping the hood out (formulate (X))
+
+       code for buttons is easy; the function is called when the button is pressed
+       since motor commands never stop until another function is called, then the code
+       for a button can just be a line long.                                           */
+
+    Controller1.ButtonL2.pressed(stop_intakes);
+
+
+    Controller1.ButtonR2.pressed(special_run_intakes);
+    Controller1.ButtonA.pressed(pooprollers);
+    Controller1.ButtonR1.pressed(launchrollers);
+    Controller1.ButtonY.pressed(reverse_intakes);
+    Controller1.ButtonL1.pressed(stoprollers);
+    Controller1.ButtonX.pressed(formulate);
+    Controller1.ButtonB.pressed(gyrolog);
+
+    //Controller1.ButtonR2.pressed(PID_test);
+
+    // one button as a "force quit"
+    // if Rishvik (our team driver) is in a panic or is cracked under pressure he can use this button as a shortcut
+    // used to STOP ALL MOTORS
+
+    //Controller1.ButtonB.pressed(forcequit);
+
+    wait(1, msec); // Sleep the task for a short amount of time to
+                    // prevent wasted resources.
+  }
+}
+
+// Main will set up the competition functions and callbacks.
+int main() {
+  // Set up callbacks for autonomous and driver control periods.
+  //Competition.autonomous(autonomous);
+  //Competition.drivercontrol(usercontrol);
+
+  //PID_test();
+
+  // Run the pre-autonomous function.
+  //pre_auton();
+
+  // Prevent main from exiting with an infinite loop.
+  while (true) {
+    wait(100, msec);
+  }
+}
