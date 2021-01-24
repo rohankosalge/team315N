@@ -1,5 +1,6 @@
 from tkinter import *
 from math import floor
+from random import *
 
 # fonts
 TABLE_FONT = ("Ubuntu", 12, "bold")
@@ -8,12 +9,13 @@ AUTON_TITLE_FONT = ("Ubuntu", 18, "bold")
 AUTON_REG_FONT = ("Ubuntu", 15, "bold")
 DOUBLER_FONT = ("Ubuntu", 10, "normal")
 TOWER_FONT = ("Ubuntu", 20, "bold")
+START_ROBOT_FONT = ("Ubuntu", 17, "bold")
 
 master = Tk()
 master.title("VEX 2020-21 Change Up Head-to-Head Scoring")
 
-scores_canvas = Canvas(master, height=880, width=1200, bd=0, highlightthickness=0, bg="white")
-scores_canvas.grid(row=0, column=0)
+canvas = Canvas(master, height=880, width=1200, bd=0, highlightthickness=0, bg="white")
+canvas.grid(row=0, column=0)
 
 # DATA
 ########################################################################
@@ -23,7 +25,7 @@ teams = ["Red A", "Red B", "Blue A", "Blue B"]
 team_colors = ["red", "blue"]
 
 totals_texts = [[["Red Alliance Total: 0", "Blue Alliance Total: 0"], ["Red Alliance Total: 0", "Blue Alliance Total: 0"],
-["Red Alliance Total: 0", "Blue Alliance Total: 0"]],
+                 ["Red Alliance Total: 0", "Blue Alliance Total: 0"]],
                 [["Red Alliance Total: 0", "Blue Alliance Total: 0"], ["Red Alliance Total: 0", "Blue Alliance Total: 0"],
                  ["Red Alliance Total: 0", "Blue Alliance Total: 0"]],
                 [["Red Alliance Total: 0", "Blue Alliance Total: 0"], ["Red Alliance Total: 0", "Blue Alliance Total: 0"],
@@ -32,26 +34,47 @@ totals_owners = [["No One owns this goal", "No One owns this goal", "No One owns
                  ["No One owns this goal", "No One owns this goal", "No One owns this goal"],
                  ["No One owns this goal", "No One owns this goal", "No One owns this goal"]]
 
-field = [[
-        # Red A Field  Layout (Goal labels)= A B C / D E F / G H I
-          [None, "blue", "red"], ["red", "blue", "red"], [None, "red", "blue"],
-          [None, "blue", "red"], [None, None, None], [None, "red", "blue"],
-          [None, "blue", "red"], ["blue", "red", "blue"], [None, "red", "blue"]],
+# field = [[
+#         # Red A Field  Layout (Goal labels)= A B C / D E F / G H I
+#           [None, "blue", "red"], ["red", "blue", "red"], [None, "red", "blue"],
+#           [None, "blue", "red"], [None, None, None], [None, "red", "blue"],
+#           [None, "blue", "red"], ["blue", "red", "blue"], [None, "red", "blue"]],
+#
+#         # Red B Field
+#          [[None, "blue", "red"], ["red", "blue", "red"], [None, "red", "blue"],
+#           [None, "blue", "red"], [None, None, None], [None, "red", "blue"],
+#           [None, "blue", "red"], ["blue", "red", "blue"], [None, "red", "blue"]],
+#
+#         # Blue A Field
+#          [[None, "blue", "red"], ["red", "blue", "red"], [None, "red", "blue"],
+#           [None, "blue", "red"], [None, None, None], [None, "red", "blue"],
+#           [None, "blue", "red"], ["blue", "red", "blue"], [None, "red", "blue"]],
+#
+#         # Blue B Field
+#          [[None, "blue", "red"], ["red", "blue", "red"], [None, "red", "blue"],
+#           [None, "blue", "red"], [None, None, None], [None, "red", "blue"],
+#           [None, "blue", "red"], ["blue", "red", "blue"], [None, "red", "blue"]]]
 
-        # Red B Field
-         [[None, "blue", "red"], ["red", "blue", "red"], [None, "red", "blue"],
-          [None, "blue", "red"], [None, None, None], [None, "red", "blue"],
-          [None, "blue", "red"], ["blue", "red", "blue"], [None, "red", "blue"]],
+field = [
+            [[None, None, None], [None, None, None], [None, None, None],
+            [None, None, None], [None, None, None], [None, None, None],
+            [None, None, None], [None, None, None], [None, None, None]],
 
-        # Blue A Field
-         [[None, "blue", "red"], ["red", "blue", "red"], [None, "red", "blue"],
-          [None, "blue", "red"], [None, None, None], [None, "red", "blue"],
-          [None, "blue", "red"], ["blue", "red", "blue"], [None, "red", "blue"]],
+            [[None, None, None], [None, None, None], [None, None, None],
+            [None, None, None], [None, None, None], [None, None, None],
+            [None, None, None], [None, None, None], [None, None, None]],
 
-        # Blue B Field
-         [[None, "blue", "red"], ["red", "blue", "red"], [None, "red", "blue"],
-          [None, "blue", "red"], [None, None, None], [None, "red", "blue"],
-          [None, "blue", "red"], ["blue", "red", "blue"], [None, "red", "blue"]]]
+            [[None, None, None], [None, None, None], [None, None, None],
+            [None, None, None], [None, None, None], [None, None, None],
+            [None, None, None], [None, None, None], [None, None, None]],
+
+            [[None, None, None], [None, None, None], [None, None, None],
+            [None, None, None], [None, None, None], [None, None, None],
+            [None, None, None], [None, None, None], [None, None, None]],
+
+        ]
+
+
 
 goals = [[None, None, None, None, None, None, None, None, None],
          [None, None, None, None, None, None, None, None, None],
@@ -83,7 +106,59 @@ is_auton_tie = False
 
 ########################################################################
 
-def draw():
+def draw_start():
+    canvas.delete('all')
+
+    canvas.create_rectangle(350, 190, 851, 691, width=4, fill="grey75")
+
+    basex, basey = 350, 190
+    for x in range(6):
+        for y in range(6):
+            tile_color = "grey" + str(randint(65, 95))
+            canvas.create_rectangle(basex + (500/6)*x, basey + (500/6)*y, basex + (500/6)*(x+1), basey + (500/6)*(y+1),
+                                    fill=tile_color, width=1)
+            #canvas.create_line(basex + (500/6)*x, basey, basex + (500/6)*x, basey + 500, width=1)
+            #canvas.create_line(basex, basey + (500/6)*y, basex + 500, basey + (500/6)*y, width=1)
+
+    ball_width = 40
+    spacing = 230
+    for x in range(3):
+        for y in range(3):
+            canvas.create_oval(basex + spacing*x, basey + spacing*y, basex + spacing*x + ball_width,
+                               basey + spacing*y + ball_width, width=4)
+
+    canvas.create_rectangle(basex+4, basey + (500/6) + 10, basex + (500/6) - 16, basey + (500/3) - 10, width=2, fill="red")
+    canvas.create_text(basex + (250/6) - 6, basey + (750/6), text="Red A", font=START_ROBOT_FONT, fill="white")
+    canvas.create_rectangle(basex+4, basey + (1000/3) + 10, basex + (500/6) - 16, basey + (2500/6) - 10, width=2, fill="red")
+    canvas.create_text(basex + (250/6) - 6, basey + (2250/6), text="Red B", font=START_ROBOT_FONT, fill="white")
+    canvas.create_rectangle(basex+496, basey + (500/6) + 10, basex + (2500/6) + 16, basey + (500/3) - 10, width=2, fill="blue")
+    canvas.create_text(basex + (1250/6) + 256, basey + (750/6), text="Blue A", font=START_ROBOT_FONT, fill="white")
+    canvas.create_rectangle(basex+496, basey + (1000/3) + 10, basex + (2500/6) + 16, basey + (2500/6) - 10, width=2, fill="blue")
+    canvas.create_text(basex + (1250/6) + 256, basey + (2250/6), text="Blue B", font=START_ROBOT_FONT, fill="white")
+
+    for x in range(3):
+        canvas.create_oval(basex+4.5, basey + 5 + spacing*x, basex+34.5, basey + 35 + spacing*x, fill="blue", width=2)
+        canvas.create_oval(basex+495, basey + 5 + spacing*x, basex+465, basey + 35 + spacing*x, fill="red", width=2)
+
+    canvas.create_oval(basex+235, basey+5, basex+265, basey+35, fill="blue", width=2)
+    canvas.create_oval(basex+235, basey+495, basex+265, basey+465, fill="red", width=2)
+    canvas.create_oval(basex+32, basey+32, basex+62, basey+62, fill="red", width=2)
+    canvas.create_oval(basex+32, basey+468, basex+62, basey+438, fill="red", width=2)
+    canvas.create_oval(basex+468, basey+32, basex+438, basey+62, fill="blue", width=2)
+    canvas.create_oval(basex+468, basey+468, basex+438, basey+438, fill="blue", width=2)
+    canvas.create_oval(basex+235, basey+197, basex+265, basey+227, fill="red", width=2)
+    canvas.create_oval(basex+197, basey+235, basex+227, basey+265, fill="blue", width=2)
+    canvas.create_oval(basex+235, basey+273, basex+265, basey+303, fill="blue", width=2)
+    canvas.create_oval(basex+273, basey+235, basex+303, basey+265, fill="red", width=2)
+    canvas.create_oval(basex+235, basey+(750/6)-15, basex+265, basey+(750/6)+15, fill="red", width=2)
+    canvas.create_oval(basex+235, basey+(2250/6)-15, basex+265, basey+(2250/6)+15, fill="blue", width=2)
+
+    canvas.create_polygon(875, 190, 1190, 190, 1190, 435, 875, 435, 875, 330, 860, basey+(750/6), 875, 300, fill="blue", width=2, outline="black")
+    canvas.create_polygon(875, 445, 1190, 445, 1190, 691, 875, 691, 875, 585, 860, basey+(2250/6), 875, 555, fill="blue", width=2, outline="black")
+
+#draw_start()
+
+def draw_main():
 
     global red_total
     global blue_total
@@ -92,7 +167,7 @@ def draw():
     global is_auton_blue
     global is_auton_tie
 
-    scores_canvas.delete('all')
+    canvas.delete('all')
     for x in range(3):
         for y in range(3):
             basey, basex = 400 * x, 280 * y
@@ -104,25 +179,25 @@ def draw():
                         boxcolor = team_colors[floor(c / 2)]
                         boxtext = teams[c]
 
-                        scores_canvas.create_rectangle(basey + addy, basex + addx, basey + addy + 100,
+                        canvas.create_rectangle(basey + addy, basex + addx, basey + addy + 100,
                                                        basex + addx + (140 / 3),
                                                        fill=boxcolor)
-                        scores_canvas.create_text(basey + addy + 60, basex + addx + (70 / 3),
+                        canvas.create_text(basey + addy + 60, basex + addx + (70 / 3),
                                                   text=boxtext, fill="white", font=TABLE_FONT, anchor=E)
 
                         doubler_box_color = boxcolor
                         if doublers[c][(3 * y) + x] == True:
                             doubler_box_color = "yellow"
-                        scores_canvas.create_rectangle(basey+addy+70, basex+addx+15, basey+addy+86.667, basex+addx+31.667, width=2, fill=doubler_box_color)
-                        scores_canvas.create_text(basey+addy+78.333, basex+addx+23.333, text="D", font=DOUBLER_FONT)
+                        canvas.create_rectangle(basey+addy+70, basex+addx+15, basey+addy+86.667, basex+addx+31.667, width=2, fill=doubler_box_color)
+                        canvas.create_text(basey+addy+78.333, basex+addx+23.333, text="D", font=DOUBLER_FONT)
                     else:
-                        scores_canvas.create_rectangle(basey + addy, basex + addx, basey + addy + 100,
+                        canvas.create_rectangle(basey + addy, basex + addx, basey + addy + 100,
                                                        basex + addx + (140 / 3))
 
                         ball_color = field[c][(3 * y) + x][r - 1]
                         if ball_color == None:
                             ball_color = "white"
-                        scores_canvas.create_oval(basey + addy + 30, basex + addx + (10 / 3), basey + addy + 70,
+                        canvas.create_oval(basey + addy + 30, basex + addx + (10 / 3), basey + addy + 70,
                                                   basex + addx + (130 / 3),
                                                   width=2, fill=ball_color)
 
@@ -130,14 +205,14 @@ def draw():
                 for c in range(2):
                     addx, addy = (140 / 3) * r, 200 * c
 
-                    scores_canvas.create_rectangle(basey + addy, basex + addx, basey + addy + 200,
+                    canvas.create_rectangle(basey + addy, basex + addx, basey + addy + 200,
                                                    basex + addx + (140 / 3))
 
                     if c == 0:
                         text_color = "red"
                     else:
                         text_color = "blue"
-                    scores_canvas.create_text(basey + addy + 100, basex + addx + (70 / 3), text=totals_texts[y][x][c],
+                    canvas.create_text(basey + addy + 100, basex + addx + (70 / 3), text=totals_texts[y][x][c],
                                               fill=text_color, font=TABLE_FONT)
 
             for r in range(5, 6):
@@ -148,47 +223,47 @@ def draw():
                 else:
                     text_color = "black"
 
-                scores_canvas.create_rectangle(basey, basex + (700 / 3), basey + 400, basex + 280)
-                scores_canvas.create_text(basey + 200, basex + (770 / 3), text=totals_owners[y][x],
+                canvas.create_rectangle(basey, basex + (700 / 3), basey + 400, basex + 280)
+                canvas.create_text(basey + 200, basex + (770 / 3), text=totals_owners[y][x],
                                           fill=text_color, font=TABLE_FONT)
 
-                scores_canvas.create_rectangle(basey + 5, basex + (700 / 3) + 5, basey + 5 + (140 / 3), basex + 280 - 5, width=2, fill="grey90")
-                scores_canvas.create_text(basey + 5 + (70 / 3), basex + (770/3), text=chr(65 + (3 * y + x)), font=TOWER_FONT)
+                canvas.create_rectangle(basey + 5, basex + (700 / 3) + 5, basey + 5 + (140 / 3), basex + 280 - 5, width=2, fill="grey90")
+                canvas.create_text(basey + 5 + (70 / 3), basex + (770/3), text=chr(65 + (3 * y + x)), font=TOWER_FONT)
 
     for x in range(3):
-        scores_canvas.create_line(0, 280 * (x + 1), 1200, 280 * (x + 1), width=3)
-        scores_canvas.create_line(400 * (x + 1), 0, 400 * (x + 1), 840, width=3)
+        canvas.create_line(0, 280 * (x + 1), 1200, 280 * (x + 1), width=3)
+        canvas.create_line(400 * (x + 1), 0, 400 * (x + 1), 840, width=3)
 
-    scores_canvas.create_line(1200, 0, 1200, 880, width=3)
-    scores_canvas.create_line(0, 0, 0, 880, width=3)
+    canvas.create_line(1200, 0, 1200, 880, width=3)
+    canvas.create_line(0, 0, 0, 880, width=3)
 
-    scores_canvas.create_text(20, 860, text="Autonomous Winner:", font=AUTON_TITLE_FONT, anchor=W)
+    canvas.create_text(20, 860, text="Autonomous Winner:", font=AUTON_TITLE_FONT, anchor=W)
 
-    scores_canvas.create_rectangle(210, 845, 725, 875, width=2, fill="grey90")
+    canvas.create_rectangle(210, 845, 725, 875, width=2, fill="grey90")
 
     if is_auton_red:
-        scores_canvas.create_rectangle(215, 848, 370, 872, width=2, fill="yellow")
+        canvas.create_rectangle(215, 848, 370, 872, width=2, fill="yellow")
     else:
-        scores_canvas.create_rectangle(215, 848, 370, 872, width=2, fill="white")
+        canvas.create_rectangle(215, 848, 370, 872, width=2, fill="white")
 
     if is_auton_blue:
-        scores_canvas.create_rectangle(390, 848, 545, 872, width=2, fill="yellow")
+        canvas.create_rectangle(390, 848, 545, 872, width=2, fill="yellow")
     else:
-        scores_canvas.create_rectangle(390, 848, 545, 872, width=2, fill="white")
+        canvas.create_rectangle(390, 848, 545, 872, width=2, fill="white")
 
     if is_auton_tie:
-        scores_canvas.create_rectangle(565, 848, 720, 872, width=2, fill="yellow")
+        canvas.create_rectangle(565, 848, 720, 872, width=2, fill="yellow")
     else:
-        scores_canvas.create_rectangle(565, 848, 720, 872, width=2, fill="white")
+        canvas.create_rectangle(565, 848, 720, 872, width=2, fill="white")
 
-    scores_canvas.create_rectangle(742.5, 845, 1170, 875, width=2, fill="grey90")
-    scores_canvas.create_text(875, 860, text="RED       " + str(red_total), font=SCORE_FONT, fill="red", anchor=E)
-    scores_canvas.create_text(950, 860, text="-", font=SCORE_FONT, fill="black")
-    scores_canvas.create_text(1025, 860, text=str(blue_total) + "       BLUE", font=SCORE_FONT, fill="blue", anchor=W)
+    canvas.create_rectangle(730, 845, 1190, 875, width=2, fill="grey90")
+    canvas.create_text(875, 860, text="RED       " + str(red_total), font=SCORE_FONT, fill="red", anchor=E)
+    canvas.create_text(950, 860, text="-", font=SCORE_FONT, fill="black")
+    canvas.create_text(1025, 860, text=str(blue_total) + "       BLUE", font=SCORE_FONT, fill="blue", anchor=W)
 
-    scores_canvas.create_text(292.5, 860, text="RED", font=AUTON_REG_FONT)
-    scores_canvas.create_text(292.5+175, 860, text="BLUE", font=AUTON_REG_FONT)
-    scores_canvas.create_text(292.5+350, 860, text="TIE", font=AUTON_REG_FONT)
+    canvas.create_text(292.5, 860, text="RED", font=AUTON_REG_FONT)
+    canvas.create_text(292.5+175, 860, text="BLUE", font=AUTON_REG_FONT)
+    canvas.create_text(292.5+350, 860, text="TIE", font=AUTON_REG_FONT)
 
 
 global red_scoring_map
@@ -454,7 +529,54 @@ def mouse_click_event(x, y):
 
 
     update()
-    draw()
+    draw_main()
+
+
+def reset_field(event):
+    global field
+    field = [[
+
+         # Red A Field  Layout (Goal labels)= A B C / D E F / G H I
+           [None, "blue", "red"], ["red", "blue", "red"], [None, "red", "blue"],
+           [None, "blue", "red"], [None, None, None], [None, "red", "blue"],
+           [None, "blue", "red"], ["blue", "red", "blue"], [None, "red", "blue"]],
+
+         # Red B Field
+          [[None, "blue", "red"], ["red", "blue", "red"], [None, "red", "blue"],
+           [None, "blue", "red"], [None, None, None], [None, "red", "blue"],
+           [None, "blue", "red"], ["blue", "red", "blue"], [None, "red", "blue"]],
+
+         # Blue A Field
+          [[None, "blue", "red"], ["red", "blue", "red"], [None, "red", "blue"],
+           [None, "blue", "red"], [None, None, None], [None, "red", "blue"],
+           [None, "blue", "red"], ["blue", "red", "blue"], [None, "red", "blue"]],
+
+         # Blue B Field
+          [[None, "blue", "red"], ["red", "blue", "red"], [None, "red", "blue"],
+           [None, "blue", "red"], [None, None, None], [None, "red", "blue"],
+           [None, "blue", "red"], ["blue", "red", "blue"], [None, "red", "blue"]]]
+
+def clear_field(event):
+    global field
+    field = [
+        [[None, None, None], [None, None, None], [None, None, None],
+         [None, None, None], [None, None, None], [None, None, None],
+         [None, None, None], [None, None, None], [None, None, None]],
+
+        [[None, None, None], [None, None, None], [None, None, None],
+         [None, None, None], [None, None, None], [None, None, None],
+         [None, None, None], [None, None, None], [None, None, None]],
+
+        [[None, None, None], [None, None, None], [None, None, None],
+         [None, None, None], [None, None, None], [None, None, None],
+         [None, None, None], [None, None, None], [None, None, None]],
+
+        [[None, None, None], [None, None, None], [None, None, None],
+         [None, None, None], [None, None, None], [None, None, None],
+         [None, None, None], [None, None, None], [None, None, None]],
+
+    ]
+
 
 
 def formulate(event):
@@ -462,8 +584,10 @@ def formulate(event):
     mouse_click_event(x, y)
 
 master.bind("<Button-1>", formulate)
+master.bind("<r>", reset_field)
+master.bind("<c>", clear_field)
 
 update()
-draw()
+draw_main()
 
 mainloop()
