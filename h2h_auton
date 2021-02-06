@@ -1,0 +1,36 @@
+// unfold hood
+  formulate(70, 200);
+
+  // turn and get ball at Tower #1, then launch preload
+  rturn(355, 2500);
+  start_intakes(0);
+  rdrive(600, 50, 1500, false);
+  stop_intakes();
+  rturn(334, 2500);
+  launch_rollers(0, 0.75);
+
+  // move back from Tower #1, turn and move backwards to Tower #2
+  // turn and shoot acquired ball from Tower #1 in Tower #2
+  rturn(319, 2500);
+  start_intakes(75);
+  rdrive(-650, 50, 1500, false);
+  stop_intakes();
+  rturn(0, 2500);
+  rdrive(-2100, 60, 2000, false);
+  rturn(270, 2500);
+  rdrive(500, 50, 1000, false);
+  launch_rollers(0, 0.75);
+
+  // move back from Tower #2, turn and move towards Tower #3
+  // get to a 45˚ angle, intake ball in front of tower and 
+  // launch that ball to finish sequence
+  //rdrive(-100, 50, 1000, false);
+  rdrive(-250, 35, 1500, false);
+  rturn(180, 2500);
+  rdrive(2275, 60, 3000, false);  // Slowed the P a bit since it seems to jerk here. Increased I; Changed P from 50 to 60
+  rturn(225, 2500);
+  start_intakes(50);
+  rdrive(650, 55, 3000, false);
+  stop_intakes();
+  rdrive(200, 110, 3300, false);
+  launch_rollers(0, 1); // Shoot at Tower #3; changed from 125 to 0
