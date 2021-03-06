@@ -1,0 +1,700 @@
+/*----------------------------------------------------------------------------*/
+/*                                                                            */
+/*    Module:       main.cpp                                                  */
+/*    Author:       rohankosalge                                              */
+/*    Created:      Thu Dec 24 2020                                           */
+/*    Description:  V5 project                                                */
+/*                                                                            */
+/*----------------------------------------------------------------------------*/
+
+#include "vex.h"
+
+// ---- START VEXCODE CONFIGURED DEVICES ----
+// Robot Configuration:
+// [Name]               [Type]        [Port(s)]
+// leftLine             line          F               
+// middleLine           line          H               
+// rightLine            line          A               
+// bottomLine           line          B               
+// ---- END VEXCODE CONFIGURED DEVICES ----
+using namespace vex;
+
+motor leftFront = motor(PORT4, true);
+motor rightFront = motor(PORT5, false);
+motor leftBack = motor(PORT2, true);
+motor rightBack = motor(PORT6, false);
+motor bottomRollers = motor(PORT3, ratio6_1, false);
+motor topRollers = motor(PORT20, ratio6_1, false);
+motor leftIntake = motor(PORT8, ratio6_1, false);
+motor rightIntake = motor(PORT15, ratio6_1, true);
+
+inertial gyrosensor = inertial(PORT1);
+controller Controller = controller();
+
+// configure an instance of Competition (for the main command)
+competition Competition;
+
+double XSENSE = 0.75;      // turning sensitivity (from 0 to 1)
+double YSENSE = 0.85;     // driving sensitivity (from 0 to 1)
+
+
+// ---- AUTONOMOUS ----
+// functions related to auton as well as pre-auton, shortcuts, etc.
+
+// constants needed
+const double DRIVEP = 70;                   // 30 for under 750 ticks, 50 for (750, 1000), 70 for > 1000
+const double DRIVEI = 1;
+const double DRIVED = 0;
+
+const double TURNP = 45;
+const double TURNI = 1;
+const double TURND = 0;
+const double TURN_OFFSET = 2;
+const long TURN_INTEGRAL_LIMIT = 2000;
+
+const long DRIVE_INTEGRAL_LIMIT = 1500;     // 1500 for < 750, 2000 for (750, 1000), 2500 for > 1000
+const long DRIVE_PROP_LIMIT = 50000;
+const double HEAD_OFFSET = 0.1;
+const long OFFSET_VOLTAGE = 600;
+const long VOLTAGE_RATE = 10;
+const long VOLTAGE_MIN = 1500;
+const long TIME_INTERVAL = 2;               // in milliseconds
+
+const int WHITE_REFLECT_PCT = 2;
+const int GREY_REFLECT_PCT = 44;
+const int THRESH = (WHITE_REFLECT_PCT+GREY_REFLECT_PCT)/2;  // threshold constant takes the average of the color values
+enum line_triggered_enum {NO_LINES = 0, LEFT_LINE = 1, RIGHT_LINE = 2, ALL_LINES = 3};
+
+// this function is called before running general commands
+void pre_auton(void) {
+  // Initializing Robot Configuration. DO NOT REMOVE!
+  vexcodeInit();
+
+  // calibrate the inertial sensor
+  gyrosensor.calibrate();
+  while(gyrosensor.isCalibrating()){
+    wait(100, msec);
+  }
+}
+
+void assignDriveMotorsVoltage(double leftSide, double rightSide){
+  leftFront.spin(forward, leftSide, vex::voltageUnits::mV);
+  leftBack.spin(forward, leftSide, vex::voltageUnits::mV);
+  rightFront.spin(forward, rightSide, vex::voltageUnits::mV);
+  rightBack.spin(forward, rightSide, vex::voltageUnits::mV);
+}
+
+double getAverageVoltage(){
+  // get average voltage of the back two motors 
+  return (fabs(leftBack.voltage(vex::voltageUnits::mV)) + fabs(rightBack.voltage(vex::voltageUnits::mV)) ) / 2;
+}
+
+double getAverageTicks(){
+  return (fabs(leftBack.position(vex::rotationUnits::raw)) + fabs(leftBack.position(vex::rotationUnits::raw)) ) / 2;
+}
+
+// reset all motor positions 
+void resetMotors(){
+  leftFront.resetPosition();
+  leftBack.resetPosition();
+  rightFront.resetPosition();
+  rightBack.resetPosition();
+}
+
+// stop all motors and hold 
+void stopMotors(){
+  leftFront.stop(vex::brakeType::hold);
+  rightFront.stop(vex::brakeType::hold);
+  leftBack.stop(vex::brakeType::hold);
+  rightBack.stop(vex::brakeType::hold);
+}
+
+void stopMotors(int stoptype){
+  if(stoptype == 0){
+    leftFront.stop(vex::brakeType::coast);
+    rightFront.stop(vex::brakeType::coast);
+    leftBack.stop(vex::brakeType::coast);
+    rightBack.stop(vex::brakeType::coast);
+  }else if (stoptype == 1){
+    leftFront.stop(vex::brakeType::brake);
+    rightFront.stop(vex::brakeType::brake);
+    leftBack.stop(vex::brakeType::brake);
+    rightBack.stop(vex::brakeType::brake);
+  }else if (stoptype == 2){
+    leftFront.stop(vex::brakeType::hold);
+    rightFront.stop(vex::brakeType::hold);
+    leftBack.stop(vex::brakeType::hold);
+    rightBack.stop(vex::brakeType::hold);
+  }
+}
+
+int get_line_values(){
+  // Key to check line values:
+  // 0: if none of the lines are white
+  // 1: if one of the lines are white
+  // 2: if two of the lines are white
+  // 3: if all of the lines are white
+  // there should be 2^3, or 8 cases, that are checked. 
+
+  int result;
+
+  int leftval = leftLine.value(pct);
+  int middleval = middleLine.value(pct);
+  int rightval = rightLine.value(pct);
+
+  if(leftval < THRESH && middleval < THRESH && rightval < THRESH){
+    result = 3;
+  }else{
+    if((leftval < THRESH && middleval < THRESH && rightval >= THRESH) || (leftval < THRESH && middleval >= THRESH && rightval < THRESH) || (leftval >= THRESH && middleval < THRESH && rightval < THRESH)){
+      result = 2;
+    }else{
+      if((leftval < THRESH && middleval >= THRESH && rightval >= THRESH) || (leftval >= THRESH && middleval >= THRESH && rightval < THRESH) || (leftval >= THRESH && middleval < THRESH && rightval >= THRESH)){
+        result = 1;
+      }else{
+        result = 0;
+      }
+    }
+  }
+
+  return result;
+
+}
+
+// both functions are used in drivePIDheading
+// if user requests, check if left line tracker or right line tracker
+// detects the line, then stop 
+
+bool left_line_is_detecting(){
+  int left_line_val = leftLine.value(pct);
+  if (left_line_val < THRESH){
+    return true;
+  }else{
+    return false;
+  }
+}
+
+bool right_line_is_detecting(){
+  int right_line_val = rightLine.value(pct);
+  if (right_line_val < THRESH){
+    return true;
+  }else{
+    return false;
+  }
+}
+
+
+double safegetheading(){
+  double gyroheading = gyrosensor.heading();
+  if(gyroheading > 359 || gyroheading < 1) {gyroheading = 0;}
+  return gyroheading;
+}
+
+// for the check_for_line int:
+// 0 - ignore any line detection
+// 1 - check for left tracker triggering
+// 2 - check for right tracker triggering
+// 3 - check for left+middle+right
+void drivePIDheading(double p, double i, double d, long integral_limit, long target_ticks, double head, line_triggered_enum check_for_line, int stoptype){
+  long integral; 
+  long derivative;
+  long error; 
+  long prev_error;
+  long prev_ticks;
+  double prop_pct;
+  double prev_prop_pct;
+  double final_volt = 3000.0;
+  long cur_ticks;
+  double compare_head = 0;
+  double prev_volt;
+  double cur_head;
+
+  long prev_interval_ticks = 0;
+
+  error = 0;
+  prev_error = 0;
+  cur_ticks = 0;
+  integral = 0;
+  derivative = 0;
+  prop_pct = 0;
+  prev_prop_pct = 0;
+  prev_ticks = 0;
+  prev_volt = 0;
+  bool is_forward;
+
+  resetMotors();
+
+  if(target_ticks >=0) {is_forward = true;}
+  else {is_forward = false;}
+
+  Controller.Screen.clearScreen();
+  Controller.Screen.setCursor(0, 0);
+  Controller.Screen.print("Start head: %3.2f", head);
+
+  int modcount = 25;  
+  int loopcount = 0;
+  while(abs(cur_ticks) < abs(target_ticks)){
+    compare_head = head;
+    
+    error = abs(target_ticks)  - abs(cur_ticks);
+    prop_pct = ((double) error / (double) abs(target_ticks)) * 100;
+    
+    if(prev_prop_pct == 0) {derivative = 0;}
+    else {derivative = (prop_pct - prev_prop_pct) * 100;}
+
+    integral += error;
+    if(i*integral > integral_limit) {integral = integral_limit/i;}
+    if(error > DRIVE_PROP_LIMIT) {error = DRIVE_PROP_LIMIT;}
+
+    final_volt = (abs(target_ticks)/(target_ticks)) * ((p * prop_pct) + (i * integral) + (d * derivative));
+
+    if(is_forward){
+      if(final_volt - prev_volt > VOLTAGE_RATE*TIME_INTERVAL){
+        if ((VOLTAGE_RATE*TIME_INTERVAL) + prev_volt < VOLTAGE_MIN) {final_volt = VOLTAGE_MIN;}
+        else {final_volt = (VOLTAGE_RATE*TIME_INTERVAL) + prev_volt;}
+      }
+    }else{
+      if(final_volt - prev_volt < VOLTAGE_RATE*TIME_INTERVAL){
+        if (prev_volt - (VOLTAGE_RATE*TIME_INTERVAL) > -VOLTAGE_MIN) {final_volt = -VOLTAGE_MIN;}
+        else {final_volt = prev_volt - (VOLTAGE_RATE*TIME_INTERVAL);}
+      }
+    }
+    
+    cur_head = gyrosensor.heading();
+
+    if(fabs(head-cur_head) > 180){
+      if (cur_head < head) {cur_head += 360;}
+      else {compare_head += 360;}
+    }
+
+    if(fabs(compare_head-cur_head) > HEAD_OFFSET){
+      if(compare_head > cur_head){
+        // if the target heading is greater than the current heading, then slightly turn right
+        assignDriveMotorsVoltage(final_volt+OFFSET_VOLTAGE, final_volt-OFFSET_VOLTAGE);
+      }else{
+        // if the target heading is less than the current heading, then slightly turn left
+        assignDriveMotorsVoltage(final_volt-OFFSET_VOLTAGE, final_volt+OFFSET_VOLTAGE);
+      }
+    }else{
+      assignDriveMotorsVoltage(final_volt, final_volt);
+    }
+    
+    prev_volt = final_volt;
+    prev_prop_pct = prop_pct;
+    prev_error = error;
+    prev_ticks = cur_ticks;
+    wait(TIME_INTERVAL, msec);
+    cur_ticks = getAverageTicks();
+
+
+    loopcount++;
+    if(loopcount%modcount == 0){
+      if(prev_interval_ticks == cur_ticks){
+        break;
+      }else{
+        prev_interval_ticks = cur_ticks;
+      }
+    }
+
+    // if line checking is requested, check for line detection every loop
+    
+    if (check_for_line == LEFT_LINE){
+      if (leftLine.value(pct) < THRESH){
+        break;
+      } 
+    }
+
+    if (check_for_line == RIGHT_LINE){
+      if (rightLine.value(pct) < THRESH){
+        break;
+      }
+    }
+
+
+    if (check_for_line == ALL_LINES){
+      int linestatus = get_line_values();
+      if(linestatus>=2){
+        break;
+      }
+    }
+
+  }
+  
+  stopMotors(stoptype);
+}
+
+void drivePIDheading(double p, double i, double d, long integral_limit, long target_ticks, double head){
+  drivePIDheading(p, i, d, integral_limit, target_ticks, head, NO_LINES, 2);
+}
+
+void turnPID(double turn_deg, bool is_right, long turnilim){
+  // turn right if true, turn left if false
+
+  double integral = 0;
+  double derivative = 0;
+  double error = 0;
+  double prop_pct = 0;
+  double prev_error = 0;
+  double final_volt = 0;
+
+  double cur_deg = safegetheading();
+  double start_deg = cur_deg;
+  double end_deg = 0;
+  double prev_deg = cur_deg;
+  bool switch_deg = false;
+  bool keep_looping = true;
+
+  if (is_right) {
+    end_deg = start_deg + turn_deg;
+  }
+  else {
+    end_deg = start_deg - turn_deg;
+    if(fabs(end_deg) < 0.5) end_deg = 0;
+  }
+
+  // Controller1.Screen.clearScreen();
+  // Controller1.Screen.setCursor(0, 0);
+  // Controller1.Screen.print("S: %f", start_deg);
+  // Controller1.Screen.setCursor(2, 0);
+  // Controller1.Screen.print("E: %f", end_deg);
+
+  while(keep_looping){
+
+    error = turn_deg - fabs(cur_deg - start_deg);
+    prop_pct = (error/turn_deg) * 100;
+    integral += error;
+    derivative = error - prev_error;
+
+    if(integral > turnilim){
+      integral = turnilim;
+    }
+
+    final_volt = (TURNP * prop_pct) + (TURNI * integral) + (TURND * derivative);
+
+    if(is_right){
+      assignDriveMotorsVoltage(final_volt, -final_volt);
+    }else{
+      assignDriveMotorsVoltage(-final_volt, final_volt);
+    }
+
+    prev_error = error;
+    prev_deg = cur_deg;
+    wait(2, msec);
+
+    cur_deg = safegetheading();
+
+    if(fabs(cur_deg - prev_deg) > 100) {switch_deg = true;}
+
+    if(switch_deg){
+      if (is_right) {cur_deg += 360;}
+      else {cur_deg -= 360;}
+    }
+
+    if(is_right){
+      if (cur_deg >= start_deg-TURN_OFFSET && cur_deg <= end_deg) {keep_looping = true;}
+      else {keep_looping = false;}
+    }else{
+      if (cur_deg <= start_deg+TURN_OFFSET && cur_deg >= end_deg) {keep_looping = true;}
+      else {keep_looping = false;}
+    }
+    
+  }
+  stopMotors();
+  //wait(500, msec);
+  //InertialSensor.resetHeading();
+  // Controller1.Screen.clearScreen();
+  // Controller1.Screen.setCursor(0, 0);
+  // Controller1.Screen.print("S: %f", start_deg);
+  // Controller1.Screen.setCursor(2, 0);
+  // Controller1.Screen.print("E: %f", end_deg);    
+  // Controller1.Screen.setCursor(4, 0);
+  // Controller1.Screen.print("C: %f", cur_deg);
+}
+
+
+void turnPIDheading(double head, long turnilim){
+  double cur_head = safegetheading();
+
+  // figures out which direction to turn and modifies the degrees
+  if(fabs(head-cur_head) > 180){
+    if (cur_head < head) {cur_head += 360;}
+    else {head += 360;}
+  }
+
+  double deg = head-cur_head;
+
+  if(deg < 0){
+    // if the difference is negative, then we turn left
+    turnPID(-deg, false, turnilim);
+  }else{
+    // if the difference is positive, then we turn right
+    turnPID(deg, true, turnilim);
+  }
+
+  // Controller1.Screen.clearScreen();
+  // Controller1.Screen.setCursor(0, 0);
+  // Controller1.Screen.print("C: %f", cur_head);
+  // Controller1.Screen.setCursor(2, 0);
+  // Controller1.Screen.print("T: %f", head);
+}
+
+void rturn(double head, long turnilim){
+  turnPIDheading(head, turnilim);
+}
+
+void rdrive(double ticks, double p, long integral_limit, line_triggered_enum check_for_line){
+  drivePIDheading(p, 1, 0, integral_limit, ticks, gyrosensor.heading(), check_for_line, 2);
+}
+
+void rdrive(double ticks, double p, long integral_limit){
+  drivePIDheading(p, 1, 0, integral_limit, ticks, gyrosensor.heading(), NO_LINES, 2);
+}
+
+void rdrive(double ticks, double p, long integral_limit, int stoptype){
+  drivePIDheading(p, 1, 0, integral_limit, ticks, gyrosensor.heading(), NO_LINES, stoptype);
+}
+
+
+// ---- INTAKES ----
+
+// runs intakes indefinitely (until user stops)
+void run_intakes(){
+  leftIntake.spin(forward, 100, pct);
+  rightIntake.spin(forward, 100, pct);
+  bottomRollers.spin(forward, 100, pct);  // ball is able to get in the robot 
+}
+
+void run_intakes(int rollers_vel){
+  leftIntake.spin(forward, 100, pct);
+  rightIntake.spin(forward, 100, pct);
+  bottomRollers.spin(forward, rollers_vel, pct);  // ball is able to get in the robot (user customizable speed for bottom rollers) 
+}
+
+// runs intakes for specified amount of time
+void run_intakes_for(int milliseconds){
+  leftIntake.spin(forward, 100, pct);
+  rightIntake.spin(forward, 100, pct);
+  bottomRollers.spin(forward, 100, pct);
+  wait(milliseconds, msec);
+  leftIntake.stop(hold);
+  rightIntake.stop(hold);
+}
+
+// reverses intakes indefinitely (until user stops)
+void reverse_intakes(){
+  leftIntake.spin(reverse, 100, pct);
+  rightIntake.spin(reverse, 100, pct);
+  bottomRollers.spin(reverse, 100, pct);
+  topRollers.spin(reverse, 100, pct);
+}
+
+// reverses intakes at a very small velocity, indefinitely (until user stops)
+void slow_reverse_intakes(){
+  leftIntake.spin(reverse, 25, pct);
+  rightIntake.spin(reverse, 25, pct);
+  bottomRollers.spin(reverse, 25, pct);
+  topRollers.spin(reverse, 25, pct);
+}
+
+// reverses intakes for specified amount of time
+void reverse_intakes_for(int milliseconds){
+  leftIntake.spin(reverse, 100, pct);
+  rightIntake.spin(reverse, 100, pct);
+  bottomRollers.spin(reverse, 100, pct);
+  wait(milliseconds, msec);
+  leftIntake.stop(hold);
+  rightIntake.stop(hold);
+}
+
+// stops intakes
+void stop_intakes(){
+  leftIntake.stop(hold);
+  rightIntake.stop(hold);
+}
+
+// ---- ROLLERS ----
+
+// launches rollers indefinitely (until user stops)
+void launch_rollers(){
+  topRollers.spin(forward, 100, pct);
+  bottomRollers.spin(forward, 100, pct);
+}
+
+void launch_rollers(int topvel){
+  topRollers.spin(forward, topvel, pct);
+  bottomRollers.spin(forward, 100, pct);
+}
+
+void launch_rollers_increment(){
+  topRollers.spin(forward, 100, pct);
+  while(true){
+    bottomRollers.spin(forward, 100, pct);
+    wait(1, sec);
+    bottomRollers.stop();
+    wait(0.5, sec);
+  }
+}
+
+// launches rollers for specified amount of time 
+void launch_rollers_for(int milliseconds){
+  topRollers.spin(forward, 100, pct);
+  bottomRollers.spin(forward, 100, pct);
+  wait(milliseconds, msec);
+  topRollers.stop(hold);
+  bottomRollers.stop(hold);
+}
+
+void launch_rollers_for(int milliseconds, int topvel){
+  topRollers.spin(forward, topvel, pct);
+  bottomRollers.spin(forward, topvel, pct);
+  wait(milliseconds, msec);
+  topRollers.stop(hold);
+  bottomRollers.stop(hold);
+}
+
+void slow_launch_rollers() {launch_rollers(40);}
+void medium_launch_rollers() {launch_rollers(70);}
+
+// poops rollers indefinitely (until user stops)
+void poop_rollers(){
+  topRollers.spin(reverse, 100, pct);
+  bottomRollers.spin(forward, 100, pct);
+}
+
+// poops rollers for specified amount of time
+void poop_rollers_for(int milliseconds){
+  topRollers.spin(reverse, 100, pct);
+  bottomRollers.spin(forward, 100, pct);
+  wait(milliseconds, msec);
+  topRollers.stop(hold);
+  bottomRollers.stop(hold);
+}
+
+// stops rollers
+void stop_rollers(){
+  topRollers.stop(hold);
+  bottomRollers.stop(hold);
+}
+
+
+void reverse_intakes_without_rollers(){
+  leftIntake.spin(reverse, 100, pct);
+  rightIntake.spin(reverse, 100, pct);
+}
+
+// ---- EXTRAS ---- 
+
+// flip the hood up
+void formulate(int vel, int ms){
+  //calibrateGyro();
+  // only move top rollers back for a small time
+  topRollers.spin(reverse, vel, pct);
+  wait(ms, msec);
+  topRollers.stop();
+}
+
+// customized version of formulate() that is called during the auton 
+void userformulate(){
+  formulate(50, 500);
+}
+
+// runs the autonomous part of the game
+void autonomous(void){
+  
+  // unfold hood
+  formulate(70, 200);
+
+  // turn and get ball at Tower #1, then launch preload
+  rturn(5, 2500);
+  run_intakes(0);
+  rdrive(600, 50, 1500);
+  stop_intakes();
+  rturn(26, 2500);
+  launch_rollers_for(750, 75);
+
+  // move back from Tower #1, turn and move backwards to Tower #2
+  // turn and shoot acquired ball from Tower #1 in Tower #2
+  rturn(41, 2500);
+  run_intakes(75);
+  rdrive(-725, 50, 1500);
+  stop_intakes();
+  bottomRollers.stop();
+  rturn(0, 2500);
+  rdrive(-2250, 70, 2500);
+  rturn(90, 2500);
+  rdrive(500, 50, 1000);
+  launch_rollers_for(750);
+
+  // move back from Tower #2 and accelerate towards middle tower
+  // use inertia (stop motors, coast) to gently roll ball inside the tower
+  rdrive(-1950, 100, 4000, 0);
+  
+  // move a little forward from the middle tower, then turn towards Tower #3
+  rdrive(469.7, 60, 1500);
+  rturn(140, 2500);
+  //run_intakes(50);
+  rdrive(3700.05, 100, 1800);
+  //wait(250, msec);
+  //stop_intakes();
+  //launch_rollers_for(1000, 75); // Shoot at Tower #3; changed from 125 to 0
+  
+}
+
+// controls all the joystick and button commands
+void usercontrol(void) {
+  // Initializing Robot Configuration. DO NOT REMOVE!
+  vexcodeInit();
+
+  int drivepos;
+  int turnpos;
+  int leftunits;
+  int rightunits;
+  
+  while(1){
+    drivepos = XSENSE*Controller.Axis1.position();
+    turnpos = YSENSE*Controller.Axis3.position();
+
+    leftunits = drivepos + turnpos;
+    rightunits = turnpos - drivepos;
+    //rightunits = drivepos - turnpos;
+
+    if(leftunits == 0 && rightunits == 0){
+      leftFront.stop(coast);
+      rightFront.stop(coast);
+      leftBack.stop(coast);
+      rightBack.stop(coast);
+    }else{
+      leftFront.spin(forward, leftunits, pct);
+      rightFront.spin(forward, rightunits, pct);
+      leftBack.spin(forward, leftunits, pct);
+      rightBack.spin(forward, rightunits, pct);
+    }
+    
+
+    Controller.ButtonR2.pressed(run_intakes);
+    Controller.ButtonL2.pressed(stop_intakes);
+    Controller.ButtonR1.pressed(launch_rollers);
+    Controller.ButtonL1.pressed(stop_rollers);
+    Controller.ButtonRight.pressed(poop_rollers);
+    Controller.ButtonY.pressed(reverse_intakes);
+    Controller.ButtonX.pressed(userformulate);
+    Controller.ButtonUp.pressed(slow_reverse_intakes);
+    Controller.ButtonDown.pressed(slow_launch_rollers);
+    Controller.ButtonB.pressed(reverse_intakes_without_rollers);
+    Controller.ButtonLeft.pressed(launch_rollers_increment);
+  }
+
+}
+
+// Main will set up the competition functions and callbacks.
+int main() {
+  // Set up callbacks for autonomous and driver control periods.
+  Competition.autonomous(autonomous);
+  Competition.drivercontrol(usercontrol);
+
+  pre_auton();
+
+  // Prevent main from exiting with an infinite loop.
+  while (true) {
+    wait(100, msec);
+  }
+}
