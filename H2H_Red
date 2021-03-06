@@ -8,6 +8,15 @@
 /*----------------------------------------------------------------------------*/
 
 #include "vex.h"
+
+// ---- START VEXCODE CONFIGURED DEVICES ----
+// Robot Configuration:
+// [Name]               [Type]        [Port(s)]
+// leftLine             line          F               
+// middleLine           line          H               
+// rightLine            line          A               
+// bottomLine           line          B               
+// ---- END VEXCODE CONFIGURED DEVICES ----
 using namespace vex;
 
 motor leftFront = motor(PORT4, true);
@@ -25,7 +34,7 @@ controller Controller = controller();
 // configure an instance of Competition (for the main command)
 competition Competition;
 
-double XSENSE = 0.65;      // turning sensitivity (from 0 to 1)
+double XSENSE = 0.75;      // turning sensitivity (from 0 to 1)
 double YSENSE = 0.85;     // driving sensitivity (from 0 to 1)
 
 
@@ -428,6 +437,7 @@ void run_intakes(){
   leftIntake.spin(forward, 100, pct);
   rightIntake.spin(forward, 100, pct);
   bottomRollers.spin(forward, 100, pct);  // ball is able to get in the robot 
+  topRollers.spin(forward, 10, pct);      // top rollers move at slow velocity to get the ball as high in the robot as possible
 }
 
 void run_intakes(int rollers_vel){
@@ -486,6 +496,21 @@ void launch_rollers(){
   bottomRollers.spin(forward, 100, pct);
 }
 
+void launch_rollers(int topvel){
+  topRollers.spin(forward, topvel, pct);
+  bottomRollers.spin(forward, 100, pct);
+}
+
+void launch_rollers_increment(){
+  topRollers.spin(forward, 100, pct);
+  while(true){
+    bottomRollers.spin(forward, 100, pct);
+    wait(1, sec);
+    bottomRollers.stop();
+    wait(0.5, sec);
+  }
+}
+
 // launches rollers for specified amount of time 
 void launch_rollers_for(int milliseconds){
   topRollers.spin(forward, 100, pct);
@@ -502,6 +527,9 @@ void launch_rollers_for(int milliseconds, int topvel){
   topRollers.stop(hold);
   bottomRollers.stop(hold);
 }
+
+void slow_launch_rollers() {launch_rollers(40);}
+void medium_launch_rollers() {launch_rollers(70);}
 
 // poops rollers indefinitely (until user stops)
 void poop_rollers(){
@@ -625,8 +653,10 @@ void usercontrol(void) {
     Controller.ButtonRight.pressed(poop_rollers);
     Controller.ButtonY.pressed(reverse_intakes);
     Controller.ButtonX.pressed(userformulate);
-    Controller.ButtonDown.pressed(slow_reverse_intakes);
+    Controller.ButtonUp.pressed(slow_reverse_intakes);
+    Controller.ButtonDown.pressed(slow_launch_rollers);
     Controller.ButtonB.pressed(reverse_intakes_without_rollers);
+    Controller.ButtonLeft.pressed(launch_rollers_increment);
   }
 
 }
