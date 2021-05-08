@@ -1,0 +1,591 @@
+from tkinter import *
+
+master = Tk()
+master.title('Head-To-Head Strategy Maker')
+
+canvas = Canvas(master, height=600, width=600, bg='white', bd=0, highlightthickness=0)
+canvas.grid(row=1, column=1)
+
+
+redwarning = Canvas(master, height=600, width=150, bg='white', bd=0, highlightthickness=0)
+redwarning.grid(row=1, column=0)
+bluewarning = Canvas(master, height=600, width=150, bg='white', bd=0, highlightthickness=0)
+bluewarning.grid(row=1, column=2)
+
+redscore, bluescore = 54, 54
+redautonscore, blueautonscore = 3, 3
+redautonison, blueautonison = False, False
+
+score = Canvas(master, height=200, width=900, bg='white', bd=0, highlightthickness=0)
+score.grid(row=0, columnspan=3)
+
+side = Canvas(master, height=800, width=400, bg='white', bd=0, highlightthickness=0)
+side.grid(row=0, rowspan=2, column=3)
+
+redwarning.create_rectangle(0, 0, 150, 300, fill='pink')
+redwarning.create_rectangle(0, 300, 150, 600, fill='pink')
+bluewarning.create_rectangle(0, 0, 150, 300, fill='light blue')
+bluewarning.create_rectangle(0, 300, 150, 600, fill='light blue')
+
+TABLE_FONT = ("Courier", 30, "normal")
+DOUBLER_FONT = ("Courier", 15, "italic")
+ROW_FONT = ("Courier", 20, "normal")
+WARNING_FONT = ("Courier", 25, "bold")
+RESET_FONT = ("Courier", 35, "bold")
+SIDE_FONT = ("Courier", 35, "normal")
+SCORE_FONT = ("Courier", 75, "bold")
+AUTON_FONT = ("Courier", 40, "italic")
+
+global field
+field = [[[1,1],[2,1],[1,1],[1,1],[0,0],[1,1],[1,1],[1,2],[1,1]],
+         [[1,1],[2,1],[1,1],[1,1],[0,0],[1,1],[1,1],[1,2],[1,1]],
+         [[1,1],[2,1],[1,1],[1,1],[0,0],[1,1],[1,1],[1,2],[1,1]],
+         [[1,1],[2,1],[1,1],[1,1],[0,0],[1,1],[1,1],[1,2],[1,1]]]
+
+fieldtextwidgets = [[[None,None],[None,None],[None,None],[None,None],[None,None],[None,None],[None,None],[None,None],[None,None]],
+                    [[None,None],[None,None],[None,None],[None,None],[None,None],[None,None],[None,None],[None,None],[None,None]],
+                    [[None,None],[None,None],[None,None],[None,None],[None,None],[None,None],[None,None],[None,None],[None,None]],
+                    [[None,None],[None,None],[None,None],[None,None],[None,None],[None,None],[None,None],[None,None],[None,None]]]
+
+doublers = [[False, False, False, False, False, False, False, False, False],
+            [False, False, False, False, False, False, False, False, False],
+            [False, False, False, False, False, False, False, False, False],
+            [False, False, False, False, False, False, False, False, False]]
+
+ownerships = [None, 'blue', None, None, None, None, None, 'red', None]
+
+scores = [[3, 5, 3, 3, 0, 3, 3, 4, 3], [3, 5, 3, 3, 0, 3, 3, 4, 3], [3, 4, 3, 3, 0, 3, 3, 5, 3], [3, 4, 3, 3, 0, 3, 3, 5, 3]]
+
+blue1sum, blue2sum, blue3sum, blue4sum = 0, 0, 0, 0
+red1sum, red2sum, red3sum, red4sum = 0, 0, 0, 0
+
+doublerwidgets = [[], [], [], []]
+
+for x in range(6):
+    for y in range(6):
+        canvas.create_rectangle(100*x, (100*y)+50, (100*x)+50, (100*y)+100, fill='pink')
+        canvas.create_rectangle((100*x)+50, (100*y)+50, (100*x)+100, (100*y)+100, fill='light blue')
+
+for x in range(7):
+    canvas.create_line(0, 100*x, 800, 100*x, width=3)
+    canvas.create_line(100*x, 0, 100*x, 800, width=3)
+
+for x in range(3):
+    for y in range(6):
+        canvas.create_rectangle(100*x, 100*y, (100*x)+100, (100*y)+50, fill='red', width=3)
+        canvas.create_rectangle((100*x)+300, 100*y, (100*x)+400, (100*y)+50, fill='dodger blue', width=3)
+
+for x in range(3):
+    for y in range(3):
+        canvas.create_text((100*y) + 27.5, (100*x) + 25, text=chr(65+(3*x+y)), font=TABLE_FONT, fill='white')
+        canvas.create_text((100*y) + 327.5, (100*x) + 25, text=chr(65+(3*x+y)), font=TABLE_FONT, fill='white')
+        canvas.create_text((100*y) + 27.5, (100*x) + 325, text=chr(65+(3*x+y)), font=TABLE_FONT, fill='white')
+        canvas.create_text((100*y) + 327.5, (100*x) + 325, text=chr(65+(3*x+y)), font=TABLE_FONT, fill='white')
+
+for x in range(3):
+    for y in range(3):
+        redtext = canvas.create_text(25+(100*y), 75+(100*x), text=field[0][3*x+y][0], font=TABLE_FONT)
+        fieldtextwidgets[0][3*x+y][0] = redtext
+        bluetext = canvas.create_text(75+(100*y), 75+(100*x), text=field[0][3*x+y][1], font=TABLE_FONT)
+        fieldtextwidgets[0][3*x+y][1] = bluetext
+
+        redtext = canvas.create_text(25 + (100 * y), 375 + (100 * x), text=field[1][3*x+y][0], font=TABLE_FONT)
+        fieldtextwidgets[1][3 * x + y][0] = redtext
+        bluetext = canvas.create_text(75 + (100 * y), 375 + (100 * x), text=field[1][3*x+y][1], font=TABLE_FONT)
+        fieldtextwidgets[1][3 * x + y][1] = bluetext
+
+        redtext = canvas.create_text(325 + (100 * y), 75 + (100 * x), text=field[2][3*x+y][0], font=TABLE_FONT)
+        fieldtextwidgets[2][3 * x + y][0] = redtext
+        bluetext = canvas.create_text(375 + (100 * y), 75 + (100 * x), text=field[2][3*x+y][1], font=TABLE_FONT)
+        fieldtextwidgets[2][3 * x + y][1] = bluetext
+
+        redtext = canvas.create_text(325 + (100 * y), 375 + (100 * x), text=field[3][3*x+y][0], font=TABLE_FONT)
+        fieldtextwidgets[3][3 * x + y][0] = redtext
+        bluetext = canvas.create_text(375 + (100 * y), 375 + (100 * x), text=field[3][3*x+y][1], font=TABLE_FONT)
+        fieldtextwidgets[3][3 * x + y][1] = bluetext
+
+for x in range(3):
+    for y in range(3):
+        doublerwidget = canvas.create_rectangle(60+(100*y), 10+(100*x), 90+(100*y), 40+(100*x), width=2)
+        canvas.create_text(75 + (100 * y), 25 + (100 * x), text='D', font=DOUBLER_FONT)
+        doublerwidgets[0].append(doublerwidget)
+
+        doublerwidget = canvas.create_rectangle(60 + (100 * y), 310 + (100 * x), 90 + (100 * y), 340 + (100 * x), width=2)
+        canvas.create_text(75 + (100 * y), 325 + (100 * x), text='D', font=DOUBLER_FONT)
+        doublerwidgets[1].append(doublerwidget)
+
+        doublerwidget = canvas.create_rectangle(360+(100*y), 10+(100*x), 390+(100*y), 40+(100*x), width=2)
+        canvas.create_text(375 + (100 * y), 25 + (100 * x), text='D', font=DOUBLER_FONT)
+        doublerwidgets[2].append(doublerwidget)
+
+        doublerwidget = canvas.create_rectangle(360 + (100 * y), 310 + (100 * x), 390 + (100 * y), 340 + (100 * x), width=2)
+        canvas.create_text(375 + (100 * y), 325 + (100 * x), text='D', font=DOUBLER_FONT)
+        doublerwidgets[3].append(doublerwidget)
+
+canvas.create_line(0, 300, 600, 300, width=8)
+canvas.create_line(300, 0, 300, 600, width=8)
+
+redwarning.create_line(0, 300, 150, 300, width=5)
+bluewarning.create_line(0, 300, 150, 300, width=5)
+
+redwarning.create_text(75, 30, text='Red 1', font=TABLE_FONT)
+redwarning.create_text(75, 330, text='Red 2', font=TABLE_FONT)
+bluewarning.create_text(75, 30, text='Blue 1', font=TABLE_FONT)
+bluewarning.create_text(75, 330, text='Blue 2', font=TABLE_FONT)
+
+score.create_rectangle(760, 10, 890, 190, fill='light grey', width=3)
+score.create_text(825, 100, text='RESET', font=RESET_FONT)
+
+
+red1sign1 = redwarning.create_rectangle(0, 75, 150, 175, fill='pink', width=3)
+red1sign2 = redwarning.create_rectangle(0, 185, 150, 285, fill='light blue', width=3)
+red2sign1 = redwarning.create_rectangle(0, 375, 150, 475, fill='pink', width=3)
+red2sign2 = redwarning.create_rectangle(0, 485, 150, 585, fill='light blue', width=3)
+blue1sign1 = bluewarning.create_rectangle(0, 75, 150, 175, fill='pink', width=3)
+blue1sign2 = bluewarning.create_rectangle(0, 185, 150, 285, fill='light blue', width=3)
+blue2sign1 = bluewarning.create_rectangle(0, 375, 150, 475, fill='pink', width=3)
+blue2sign2 = bluewarning.create_rectangle(0, 485, 150, 585, fill='light blue', width=3)
+
+score.create_line(0, 200, 900, 200, width=5)
+
+signs = (red1sign1, red1sign2, red2sign1, red2sign2, blue1sign1, blue1sign2, blue2sign1, blue2sign2)
+
+
+redwarning.create_text(30, 125, text='Red:', font=WARNING_FONT, anchor=W)
+redwarning.create_text(25, 235, text='Blue:', font=WARNING_FONT, anchor=W)
+redwarning.create_text(30, 425, text='Red:', font=WARNING_FONT, anchor=W)
+redwarning.create_text(25, 535, text='Blue:', font=WARNING_FONT, anchor=W)
+bluewarning.create_text(30, 125, text='Red:', font=WARNING_FONT, anchor=W)
+bluewarning.create_text(25, 235, text='Blue:', font=WARNING_FONT, anchor=W)
+bluewarning.create_text(30, 425, text='Red:', font=WARNING_FONT, anchor=W)
+bluewarning.create_text(25, 535, text='Blue:', font=WARNING_FONT, anchor=W)
+
+red1 = redwarning.create_text(100, 125, text=0, font=WARNING_FONT, anchor=W)
+blue1 = redwarning.create_text(110, 235, text=0, font=WARNING_FONT, anchor=W)
+red2 = redwarning.create_text(100, 425, text=0, font=WARNING_FONT, anchor=W)
+blue2 = redwarning.create_text(110, 535, text=0, font=WARNING_FONT, anchor=W)
+red3 = bluewarning.create_text(100, 125, text=0, font=WARNING_FONT, anchor=W)
+blue3 = bluewarning.create_text(110, 235, text=0, font=WARNING_FONT, anchor=W)
+red4 = bluewarning.create_text(100, 425, text=0, font=WARNING_FONT, anchor=W)
+blue4 = bluewarning.create_text(110, 535, text=0, font=WARNING_FONT, anchor=W)
+
+nums = (red1, blue1, red2, blue2, red3, blue3, red4, blue4)
+
+score.create_rectangle(150, 0, 450, 200, fill='pink', width=3)
+score.create_rectangle(450, 0, 750, 200, fill='light blue', width=3)
+score.create_line(0, 100, 750, 100, width=3)
+score.create_text(140, 50, text='Score:', font=TABLE_FONT, anchor=E)
+score.create_text(140, 150, text='Rows:', font=TABLE_FONT, anchor=E)
+
+rows = ['A-B-C', 'D-E-F', 'G-H-I', 'A-D-G', 'B-E-H', 'C-F-I', 'A-E-I', 'C-E-G']
+rowindexes = [(0, 1, 2), (3, 4, 5), (6, 7, 8), (0, 3, 6), (1, 4, 7), (2, 5, 8), (0, 4, 8), (2, 4, 6)]
+bluerowwidgets = []
+redrowwidgets = []
+
+for x in range(4):
+    for y in range(2):
+        redrowwidget = score.create_rectangle(150+(150*y), 100+(25*x), 300+(150*y), 125+(25*x), width=3)
+        redrowwidgets.append(redrowwidget)
+        score.create_text(225+(150*y), 112.5+(25*x), text=rows[2*x+y], font=ROW_FONT)
+        bluerowwidget = score.create_rectangle(450 + (150 * y), 100 + (25 * x), 600 + (150 * y), 125 + (25 * x), width=3)
+        bluerowwidgets.append(bluerowwidget)
+        score.create_text(525 + (150 * y), 112.5 + (25 * x), text=rows[2 * x + y], font=ROW_FONT)
+
+
+side.create_line(0, 0, 0, 800, width=5)
+side.create_rectangle(8, 5, 395, 397, fill='light grey', width=3)
+side.create_rectangle(8, 403, 395, 795, fill='light grey', width=3)
+side.create_text(200, 28, text='Ownerships', font=SIDE_FONT)
+
+ownershiptowers = []
+redownerships, blueownerships = [], []
+
+for x in range(3):
+    for y in range(3):
+        side.create_rectangle(8 + (129 * y), 107.5 + (115 * x), 72.5 + (129 * y), 165 + (115 * x), fill='pink')
+        side.create_rectangle(72.5 + (129 * y), 107.5 + (115 * x), 137 + (129 * y), 165 + (115 * x), fill='light blue')
+        side.create_rectangle(8+(129*y), 50+((345/3)*x), 8+(129*(y+1)), 50+((345/3)*(x+1)), width=2)
+        if ownerships[3*x+y] == None:
+            fillcolor = 'grey'
+        else:
+            fillcolor = ownerships[3*x+y]
+        ownershiptower = side.create_rectangle(8+(129*y), 50+(115*x), 137+(129*y), 107.5+(115*x), width=2, fill=fillcolor)
+        ownershiptowers.append(ownershiptower)
+        side.create_text(72.5+(129*y), 78.75+(115*x), text=chr(65+(3*x+y)), font=SIDE_FONT, fill='white')
+        redownership = side.create_text(40.25+(129*y), 136.25+(115*x), text=str(scores[0][3*x+y]+scores[1][3*x+y]), font=SIDE_FONT)
+        blueownership = side.create_text(104.75+(129*y), 136.25+(115*x), text=str(scores[2][3*x+y]+scores[3][3*x+y]), font=SIDE_FONT)
+        redownerships.append(redownership)
+        blueownerships.append(blueownership)
+
+redscorewidget = score.create_text(300, 50, text=redscore, font=SCORE_FONT)
+bluescorewidget = score.create_text(600, 50, text=bluescore, font=SCORE_FONT)
+
+redautonwidget = score.create_rectangle(380, 25, 430, 75, width=3)
+blueautonwidget = score.create_rectangle(470, 25, 520, 75, width=3)
+score.create_text(405, 50, text='A', font=AUTON_FONT)
+score.create_text(495, 50, text='A', font=AUTON_FONT)
+
+
+def update():
+    red1sum, red2sum, red3sum, red4sum = 0, 0, 0, 0
+    blue1sum, blue2sum, blue3sum, blue4sum = 0, 0, 0, 0
+    redrowcounter, bluerowcounter = 0, 0
+
+    for x in range(9):
+        red1sum += field[0][x][0]
+        blue1sum += field[0][x][1]
+        red2sum += field[1][x][0]
+        blue2sum += field[1][x][1]
+        red3sum += field[2][x][0]
+        blue3sum += field[2][x][1]
+        red4sum += field[3][x][0]
+        blue4sum += field[3][x][1]
+
+    sums = (red1sum, blue1sum, red2sum, blue2sum, red3sum, blue3sum, red4sum, blue4sum)
+
+    for x in range(8):
+        if x < 4:
+            redwarning.itemconfig(nums[x], text=sums[x])
+        else:
+            bluewarning.itemconfig(nums[x], text=sums[x])
+
+        if x in (1, 3, 4, 6) and sums[x] > 14:
+            if x < 4:
+                redwarning.itemconfig(signs[x], fill='yellow')
+            else:
+                bluewarning.itemconfig(signs[x], fill='yellow')
+        elif x in (0, 2, 5, 7) and sums[x] > 15:
+            if x < 4:
+                redwarning.itemconfig(signs[x], fill='yellow')
+            else:
+                bluewarning.itemconfig(signs[x], fill='yellow')
+        elif (x in (0, 2) and sums[x] <= 15) or (x in (4, 6) and sums[x] <= 14):
+            if x < 4:
+                redwarning.itemconfig(signs[x], fill='pink')
+            else:
+                bluewarning.itemconfig(signs[x], fill='pink')
+        elif (x in (1, 3) and sums[x] <= 14) or (x in (5, 7) and sums[x] <= 15):
+            if x < 4:
+                redwarning.itemconfig(signs[x], fill='light blue')
+            else:
+                bluewarning.itemconfig(signs[x], fill='light blue')
+
+    print(doublers)
+
+    for x in range(len(field)):
+        for y in range(len(field[x])):
+            if x <= 1:
+                scores[x][y] = 2*field[x][y][0] + field[x][y][1]
+                if doublers[x][y] == True:
+                    if (x == 0 and doublers[1][y] == True) or (x == 1 and doublers[0][y] == True):
+                        scores[x][y] *= 4
+                    elif (x == 0 and doublers[1][y] == False) or (x == 1 and doublers[0][y] == False):
+                        scores[x][y] *= 2
+                elif doublers[x][y] == False:
+                    if (x == 0 and doublers[1][y] == True) or (x == 1 and doublers[0][y] == True):
+                        scores[x][y] *= 2
+
+            else:
+                scores[x][y] = field[x][y][0] + 2*field[x][y][1]
+                if doublers[x][y] == True:
+                    if (x==2 and doublers[3][y] == True) or (x==3 and doublers[2][y] == True):
+                        scores[x][y]*=4
+                    elif (x==2 and doublers[3][y] == False) or (x==3 and doublers[2][y] == False):
+                        scores[x][y]*=2
+                elif doublers[x][y] == False:
+                    if (x==2 and doublers[3][y] == True) or (x==3 and doublers[2][y] == True):
+                        scores[x][y]*=2
+
+
+
+    for x in range(9):
+        redtotal = scores[0][x] + scores[1][x]
+        bluetotal = scores[2][x] + scores[3][x]
+        #print(redtotal, bluetotal)
+        if redtotal > bluetotal:
+            ownerships[x] = 'red'
+        elif bluetotal > redtotal:
+            ownerships[x] = 'blue'
+        else:
+            ownerships[x] = None
+
+    #print(ownerships)
+    #print(scores)
+
+    for x in range(len(rowindexes)):
+        rowindex1, rowindex2, rowindex3 = rowindexes[x][0], rowindexes[x][1], rowindexes[x][2]
+        if ownerships[rowindex1] == ownerships[rowindex2] and ownerships[rowindex2] == ownerships[rowindex3] and ownerships[rowindex1] != None:
+            #print(ownerships[rowindex1])
+            #print(rowindex1)
+            #print(ownerships)
+            if ownerships[rowindex1] == 'red':
+                score.itemconfig(redrowwidgets[x], fill='yellow')
+                redrowcounter += 1
+            elif ownerships[rowindex1] == 'blue':
+                score.itemconfig(bluerowwidgets[x], fill='yellow')
+                bluerowcounter += 1
+        else:
+            score.itemconfig(redrowwidgets[x], fill='pink')
+            score.itemconfig(bluerowwidgets[x], fill='light blue')
+
+    for x in range(9):
+        if ownerships[x] == None:
+            side.itemconfig(ownershiptowers[x], fill='grey')
+        elif ownerships[x] == 'red':
+            side.itemconfig(ownershiptowers[x], fill='red')
+        elif ownerships[x] == 'blue':
+            side.itemconfig(ownershiptowers[x], fill='dodger blue')
+
+        side.itemconfig(redownerships[x], text=str(scores[0][x]+scores[1][x]))
+        side.itemconfig(blueownerships[x], text=str(scores[2][x]+scores[3][x]))
+
+
+    if redautonison and blueautonison:
+        score.itemconfig(redautonwidget, fill='yellow')
+        score.itemconfig(blueautonwidget, fill='yellow')
+        redautonscore, blueautonscore = 3, 3
+    elif redautonison and not blueautonison:
+        score.itemconfig(redautonwidget, fill='yellow')
+        score.itemconfig(blueautonwidget, fill='light blue')
+        redautonscore, blueautonscore = 6, 0
+    elif blueautonison and not redautonison:
+        score.itemconfig(redautonwidget, fill='pink')
+        score.itemconfig(blueautonwidget, fill='yellow')
+        redautonscore, blueautonscore = 0, 6
+    else:
+        score.itemconfig(redautonwidget, fill='pink')
+        score.itemconfig(blueautonwidget, fill='light blue')
+        redautonscore, blueautonscore = 3, 3
+
+
+    redscore, bluescore = sum(scores[0])+sum(scores[1])+(redrowcounter*13), sum(scores[2])+sum(scores[3])+(bluerowcounter*13)
+    redscore, bluescore = redscore+redautonscore, bluescore+blueautonscore
+    score.itemconfig(redscorewidget, text=redscore)
+    score.itemconfig(bluescorewidget, text=bluescore)
+
+
+def clear_doublers(field, ignoreindex):
+
+    for x in range(len(doublers[field])):
+        if x != ignoreindex:
+            doublers[field][x] = False
+
+            doublerwidget = doublerwidgets[field][x]
+            if field < 2:
+                canvas.itemconfig(doublerwidget, fill='red')
+            else:
+                canvas.itemconfig(doublerwidget, fill='dodger blue')
+
+def is_valid(x1, y1, x2, y2, x, y):
+    if x > x1 and x < x2 and y > y1 and y < y2:
+        return True
+    else:
+        return False
+
+def scoreadd(event):
+    x, y = event.x, event.y
+
+    for i in range(3):
+        for j in range(3):
+            # eight times through 3x3 (4 for red, 4 for blue, 3 by 3 towers per field)
+
+            x1, y1, x2, y2 = 100*j, 50+(100*i), 50+(100*j), 100+(100*i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                field[0][3*i+j][0] += 1
+                canvas.itemconfig(fieldtextwidgets[0][3*i+j][0], text=field[0][3*i+j][0])
+
+            x1, y1, x2, y2 = 50 + (100 * j), 50 + (100 * i), 100 + (100 * j), 100 + (100 * i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                field[0][3 * i + j][1] += 1
+                canvas.itemconfig(fieldtextwidgets[0][3 * i + j][1], text=field[0][3 * i + j][1])
+
+            x1, y1, x2, y2 = 100 * j, 350 + (100 * i), 50 + (100 * j), 400 + (100 * i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                field[1][3 * i + j][0] += 1
+                canvas.itemconfig(fieldtextwidgets[1][3 * i + j][0], text=field[1][3 * i + j][0])
+
+            x1, y1, x2, y2 = 50+(100 * j), 350 + (100 * i), 100 + (100 * j), 400 + (100 * i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                field[1][3 * i + j][1] += 1
+                canvas.itemconfig(fieldtextwidgets[1][3 * i + j][1], text=field[1][3 * i + j][1])
+
+            x1, y1, x2, y2 = 300+(100 * j), 50 + (100 * i), 350 + (100 * j), 100 + (100 * i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                field[2][3 * i + j][0] += 1
+                canvas.itemconfig(fieldtextwidgets[2][3 * i + j][0], text=field[2][3 * i + j][0])
+
+            x1, y1, x2, y2 = 350 + (100 * j), 50 + (100 * i), 400 + (100 * j), 100 + (100 * i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                field[2][3 * i + j][1] += 1
+                canvas.itemconfig(fieldtextwidgets[2][3 * i + j][1], text=field[2][3 * i + j][1])
+
+            x1, y1, x2, y2 = 300 + (100 * j), 350 + (100 * i), 350 + (100 * j), 400 + (100 * i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                field[3][3 * i + j][0] += 1
+                canvas.itemconfig(fieldtextwidgets[3][3 * i + j][0], text=field[3][3 * i + j][0])
+
+            x1, y1, x2, y2 = 350 + (100 * j), 350 + (100 * i), 400 + (100 * j), 400 + (100 * i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                field[3][3 * i + j][1] += 1
+                canvas.itemconfig(fieldtextwidgets[3][3 * i + j][1], text=field[3][3 * i + j][1])
+
+            # because this binding can also be used for doublers...
+
+            x1, y1, x2, y2 = 60+(100*j), 10+(100*i), 90+(100*j), 40+(100*i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                if doublers[0][3*i+j] == False:
+                    canvas.itemconfig(doublerwidgets[0][3*i+j], fill='yellow')
+                    doublers[0][3*i+j] = True
+                else:
+                    doublers[0][3*i+j] = False
+                    canvas.itemconfig(doublerwidgets[0][3*i+j], fill='red')
+
+                clear_doublers(0, 3*i+j)
+
+            x1, y1, x2, y2 = 60 + (100 * j), 310 + (100 * i), 90 + (100 * j), 340 + (100 * i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                if doublers[1][3 * i + j] == False:
+                    canvas.itemconfig(doublerwidgets[1][3 * i + j], fill='yellow')
+                    doublers[1][3 * i + j] = True
+                else:
+                    doublers[1][3 * i + j] = False
+                    canvas.itemconfig(doublerwidgets[1][3 * i + j], fill='red')
+
+                clear_doublers(1, 3*i+j)
+
+            x1, y1, x2, y2 = 360 + (100 * j), 10 + (100 * i), 390 + (100 * j), 40 + (100 * i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                if doublers[2][3 * i + j] == False:
+                    canvas.itemconfig(doublerwidgets[2][3 * i + j], fill='yellow')
+                    doublers[2][3 * i + j] = True
+                else:
+                    doublers[2][3 * i + j] = False
+                    canvas.itemconfig(doublerwidgets[2][3 * i + j], fill='dodger blue')
+
+                clear_doublers(2, 3*i+j)
+
+            x1, y1, x2, y2 = 360 + (100 * j), 310 + (100 * i), 390 + (100 * j), 340 + (100 * i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                if doublers[3][3 * i + j] == False:
+                    canvas.itemconfig(doublerwidgets[3][3 * i + j], fill='yellow')
+                    doublers[3][3 * i + j] = True
+                else:
+                    doublers[3][3 * i + j] = False
+                    canvas.itemconfig(doublerwidgets[3][3 * i + j], fill='dodger blue')
+
+                clear_doublers(3, 3*i+j)
+
+                update()
+
+    update()
+
+
+def scoresub(event):
+    x, y = event.x, event.y
+
+    for i in range(3):
+        for j in range(3):
+            # eight times through 3x3 (4 for red, 4 for blue, 3 by 3 towers per field)
+
+            x1, y1, x2, y2 = 100*j, 50+(100*i), 50+(100*j), 100+(100*i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                if field[0][3*i+j][0] > 0:
+                    field[0][3*i+j][0] -= 1
+                    canvas.itemconfig(fieldtextwidgets[0][3*i+j][0], text=field[0][3*i+j][0])
+
+            x1, y1, x2, y2 = 50 + (100 * j), 50 + (100 * i), 100 + (100 * j), 100 + (100 * i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                if field[0][3 * i + j][1] > 0:
+                    field[0][3 * i + j][1] -= 1
+                    canvas.itemconfig(fieldtextwidgets[0][3 * i + j][1], text=field[0][3 * i + j][1])
+
+            x1, y1, x2, y2 = 100 * j, 350 + (100 * i), 50 + (100 * j), 400 + (100 * i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                if field[1][3 * i + j][0] > 0:
+                    field[1][3 * i + j][0] -= 1
+                    canvas.itemconfig(fieldtextwidgets[1][3 * i + j][0], text=field[1][3 * i + j][0])
+
+            x1, y1, x2, y2 = 50+(100 * j), 350 + (100 * i), 100 + (100 * j), 400 + (100 * i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                if field[1][3 * i + j][1] > 0:
+                    field[1][3 * i + j][1] -= 1
+                    canvas.itemconfig(fieldtextwidgets[1][3 * i + j][1], text=field[1][3 * i + j][1])
+
+            x1, y1, x2, y2 = 300+(100 * j), 50 + (100 * i), 350 + (100 * j), 100 + (100 * i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                if field[2][3 * i + j][0] > 0:
+                    field[2][3 * i + j][0] -= 1
+                    canvas.itemconfig(fieldtextwidgets[2][3 * i + j][0], text=field[2][3 * i + j][0])
+
+            x1, y1, x2, y2 = 350 + (100 * j), 50 + (100 * i), 400 + (100 * j), 100 + (100 * i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                if field[2][3 * i + j][1] > 0:
+                    field[2][3 * i + j][1] -= 1
+                    canvas.itemconfig(fieldtextwidgets[2][3 * i + j][1], text=field[2][3 * i + j][1])
+
+            x1, y1, x2, y2 = 300 + (100 * j), 350 + (100 * i), 350 + (100 * j), 400 + (100 * i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                if field[3][3 * i + j][0] > 0:
+                    field[3][3 * i + j][0] -= 1
+                    canvas.itemconfig(fieldtextwidgets[3][3 * i + j][0], text=field[3][3 * i + j][0])
+
+            x1, y1, x2, y2 = 350 + (100 * j), 350 + (100 * i), 400 + (100 * j), 400 + (100 * i)
+            if is_valid(x1, y1, x2, y2, x, y):
+                if field[3][3 * i + j][1] > 0:
+                    field[3][3 * i + j][1] -= 1
+                    canvas.itemconfig(fieldtextwidgets[3][3 * i + j][1], text=field[3][3 * i + j][1])
+
+    update()
+
+def scorebind(event):
+    global redautonscore
+    global blueautonscore
+    global redautonison
+    global blueautonison
+    global field
+
+    x, y = event.x, event.y
+
+    if is_valid(760, 10, 890, 190, x, y):
+        field = [[[1, 1], [2, 1], [1, 1], [1, 1], [0, 0], [1, 1], [1, 1], [1, 2], [1, 1]],
+                 [[1, 1], [2, 1], [1, 1], [1, 1], [0, 0], [1, 1], [1, 1], [1, 2], [1, 1]],
+                 [[1, 1], [2, 1], [1, 1], [1, 1], [0, 0], [1, 1], [1, 1], [1, 2], [1, 1]],
+                 [[1, 1], [2, 1], [1, 1], [1, 1], [0, 0], [1, 1], [1, 1], [1, 2], [1, 1]]]
+        for x in range(4):
+            for y in range(9):
+                for z in range(2):
+                    canvas.itemconfig(fieldtextwidgets[x][y][z], text=field[x][y][z])
+
+        for x in range(4):
+            clear_doublers(x, 1000)
+
+        redautonison, blueautonison = False, False
+
+        update()
+
+    if is_valid(380, 25, 430, 75, x, y):
+        if redautonison:
+            redautonison = False
+        else:
+            redautonison = True
+
+        update()
+
+    if is_valid(470, 25, 520, 75, x, y):
+        if blueautonison:
+            blueautonison = False
+        else:
+            blueautonison = True
+
+        update()
+
+
+
+update()
+canvas.bind('<Button-1>', scoreadd)
+canvas.bind('<Button-2>', scoresub)
+score.bind('<Button-1>', scorebind)
+
+
+
+mainloop()
