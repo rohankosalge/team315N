@@ -1,0 +1,575 @@
+from tkinter import *
+
+master = Tk()
+master.title("Tipping Point Scoring")
+
+scorecanvas = Canvas(master, height=80, width=800, bd=0, highlightthickness=0, bg='grey60')
+scorecanvas.grid(row=0, column=0)
+
+canvas = Canvas(master, height=800, width=800, bd=0, highlightthickness=0, bg='grey60')
+canvas.grid(row=1, column=0)
+
+redscore, bluescore = 40, 40
+
+global numrings
+numrings = 0
+
+# fonts
+BIGRINGFONT = ('Courier', 50, 'normal')
+SMALLRINGFONT = ('Courier', 30, 'normal')
+ROBOTPLATFONT = ('Courier', 15, 'normal')
+AUTONFONT = ('Courier', 40, 'normal')
+SCOREFONT = ('Courier', 70, 'bold')
+PANELFONT = ('Courier', 18, 'italic')
+
+# other constants
+MAX_RINGS = 72
+
+
+
+# All goals have a base (1 point per ring) and 'middle branch' (3 points per ring)
+# One of the neutral goals (the 'middle' one) has a 'high branch' (10 points per ring)
+redgoal1, redgoal2 = [0, 0], [0, 0]
+bluegoal1, bluegoal2 = [0, 0], [0, 0]
+neutralgoal1, neutralgoal2, neutralgoal3 = [0, 0], [0, 0, 0], [0, 0]
+global redgoalison, redgoal2ison, bluegoal1ison, bluegoal2ison
+global neutralgoal1ison, neutralgoal2ison, neutralgoal3ison
+redgoal1ison, redgoal2ison, bluegoal1ison, bluegoal2ison = False, False, False, False
+neutralgoal1ison, neutralgoal2ison, neutralgoal3ison = False, False, False
+
+
+# drawing the frame
+redgoalpanel1 = canvas.create_rectangle(0, 0, 400, (800/3), fill='red', width=5)
+redgoalpanel2 = canvas.create_rectangle(400, 0, 800, (800/3), fill='red', width=5)
+neutralgoalpanel1 = canvas.create_rectangle(0, (800/3), (800/3), (1600/3), fill='yellow', width=5)
+neutralgoalpanel2 = canvas.create_rectangle((800/3), (800/3), (1600/3), (1600/3), fill='yellow', width=5)
+neutralgoalpanel3 = canvas.create_rectangle((1600/3), (800/3), 800, (1600/3), fill='yellow', width=5)
+bluegoalpanel1 = canvas.create_rectangle(0, (1600/3), 400, 800, fill='dodger blue', width=5)
+bluegoalpanel2 = canvas.create_rectangle(400, (1600/3), 800, 800, fill='dodger blue', width=5)
+
+canvas.create_rectangle(125, 180, 275, 250, fill='red', width=3)
+canvas.create_oval(160, 30, 240, 110, fill='grey75', width=3)
+canvas.create_line(200, 110, 200, 180, width=3)
+canvas.create_rectangle(525, 180, 675, 250, fill='red', width=3)
+canvas.create_oval(560, 30, 640, 110, fill='grey75', width=3)
+canvas.create_line(600, 110, 600, 180, width=3)
+
+canvas.create_rectangle(125, 180+(1600/3), 275, 250+(1600/3), fill='dodger blue', width=3)
+canvas.create_oval(160, 30+(1600/3), 240, 110+(1600/3), fill='grey75', width=3)
+canvas.create_line(200, 110+(1600/3), 200, 180+(1600/3), width=3)
+canvas.create_rectangle(525, 180+(1600/3), 675, 250+(1600/3), fill='dodger blue', width=3)
+canvas.create_oval(560, 30+(1600/3), 640, 110+(1600/3), fill='grey75', width=3)
+canvas.create_line(600, 110+(1600/3), 600, 180+(1600/3), width=3)
+
+canvas.create_rectangle((400/3)-75, 180+(800/3), (400/3)+75, 250+(800/3), fill='yellow', width=3)
+canvas.create_oval((400/3)-40, 30+(800/3), (400/3)+40, 110+(800/3), fill='grey75', width=3)
+canvas.create_line((400/3), 110+(800/3), (400/3), 180+(800/3), width=3)
+canvas.create_rectangle((2000/3)-75, 180+(800/3), (2000/3)+75, 250+(800/3), fill='yellow', width=3)
+canvas.create_oval((2000/3)-40, 30+(800/3), (2000/3)+40, 110+(800/3), fill='grey75', width=3)
+canvas.create_line((2000/3), 110+(800/3), (2000/3), 180+(800/3), width=3)
+
+canvas.create_rectangle(325, 180+(800/3), 475, 250+(800/3), fill='yellow', width=3)
+canvas.create_oval(370, 100+(800/3), 430, 160+(800/3), fill='grey75', width=3)
+canvas.create_oval(370, 20+(800/3), 430, 80+(800/3), fill='grey75', width=3)
+canvas.create_line(400, 80+(800/3), 400, 100+(800/3), width=3)
+canvas.create_line(400, 160+(800/3), 400, 180+(800/3), width=3)
+
+canvas.create_text(10, 20, text='RED 1', font=PANELFONT, anchor=W)
+canvas.create_text(410, 20, text='RED 2', font=PANELFONT, anchor=W)
+canvas.create_text(10, (800/3)+20, text='NEUTRAL 1', font=PANELFONT, anchor=W)
+canvas.create_text((800/3)+10, (800/3)+20, text='NEUTRAL 2', font=PANELFONT, anchor=W)
+canvas.create_text((1600/3)+10, (800/3)+20, text='NEUTRAL 3', font=PANELFONT, anchor=W)
+canvas.create_text(10, (1600/3)+20, text='BLUE 1', font=PANELFONT, anchor=W)
+canvas.create_text(410, (1600/3)+20, text='BLUE 2', font=PANELFONT, anchor=W)
+
+# setting the numbers for mouse binding
+redbase1 = canvas.create_text(200, 215, text=redgoal1[0], font=BIGRINGFONT, fill='purple')
+redbranch1 = canvas.create_text(200, 70, text=redgoal1[1], font=BIGRINGFONT, fill='purple')
+redbase2 = canvas.create_text(600, 215, text=redgoal2[0], font=BIGRINGFONT, fill='purple')
+redbranch2 = canvas.create_text(600, 70, text=redgoal2[1], font=BIGRINGFONT, fill='purple')
+bluebase1 = canvas.create_text(200, 215+(1600/3), text=bluegoal1[0], font=BIGRINGFONT, fill='purple')
+bluebranch1 = canvas.create_text(200, 70+(1600/3), text=bluegoal1[1], font=BIGRINGFONT, fill='purple')
+bluebase2 = canvas.create_text(600, 215+(1600/3), text=bluegoal2[0], font=BIGRINGFONT, fill='purple')
+bluebranch2 = canvas.create_text(600, 70+(1600/3), text=bluegoal2[1], font=BIGRINGFONT, fill='purple')
+neutralbase1 = canvas.create_text((400/3), 215+(800/3), text=neutralgoal1[0], font=BIGRINGFONT, fill='purple')
+neutralbranch1 = canvas.create_text((400/3), 70+(800/3), text=neutralgoal1[1], font=BIGRINGFONT, fill='purple')
+neutralbase2 = canvas.create_text(400, 215+(800/3), text=neutralgoal2[0], font=BIGRINGFONT, fill='purple')
+neutralbranch2mid = canvas.create_text(400, 130+(800/3), text=neutralgoal2[1], font=SMALLRINGFONT, fill='purple')
+neutralbranch2high = canvas.create_text(400, 50+(800/3), text=neutralgoal2[2], font=SMALLRINGFONT, fill='purple')
+neutralbase3 = canvas.create_text((2000/3), 215+(800/3), text=neutralgoal3[0], font=BIGRINGFONT, fill='purple')
+neutralbranch3 = canvas.create_text((2000/3), 70+(800/3), text=neutralgoal3[1], font=BIGRINGFONT, fill='purple')
+
+canvas.create_oval(340, 10, 390, 60, width=3)
+canvas.create_oval(740, 10, 790, 60, width=3)
+canvas.create_oval((800/3)-60, (800/3)+10, (800/3)-10, (800/3)+60, width=3)
+canvas.create_oval((1600/3)-60, (800/3)+10, (1600/3)-10, (800/3)+60, width=3)
+canvas.create_oval(740, (800/3)+10, 790, (800/3)+60, width=3)
+canvas.create_oval(340, (1600/3)+10, 390, (1600/3)+60, width=3)
+canvas.create_oval(740, (1600/3)+10, 790, (1600/3)+60, width=3)
+
+redgoalpf1 = canvas.create_text(365, 35, text='NP', font=SMALLRINGFONT)
+redgoalpf2 = canvas.create_text(765, 35, text='NP', font=SMALLRINGFONT)
+neutralgoalpf1 = canvas.create_text((800/3)-35, (800/3)+35, text='NP', font=SMALLRINGFONT)
+neutralgoalpf2 = canvas.create_text((1600/3)-35, (800/3)+35, text='NP', font=SMALLRINGFONT)
+neutralgoalpf3 = canvas.create_text(765, (800/3)+35, text='NP', font=SMALLRINGFONT)
+bluegoalpf1 = canvas.create_text(365, (1600/3)+35, text='NP', font=SMALLRINGFONT)
+bluegoalpf2 = canvas.create_text(765, (1600/3)+35, text='NP', font=SMALLRINGFONT)
+
+redrobot1panel = scorecanvas.create_rectangle(10, 10, 70, 70, fill='red', width=3)
+redrobot2panel = scorecanvas.create_rectangle(75, 10, 135, 70, fill='red', width=3)
+bluerobot1panel = scorecanvas.create_rectangle(790, 10, 730, 70, fill='dodger blue', width=3)
+bluerobot2panel = scorecanvas.create_rectangle(725, 10, 665, 70, fill='dodger blue', width=3)
+scorecanvas.create_text(40, 20, text='ROBOT', font=ROBOTPLATFONT)
+scorecanvas.create_text(105, 20, text='ROBOT', font=ROBOTPLATFONT)
+scorecanvas.create_text(760, 20, text='ROBOT', font=ROBOTPLATFONT)
+scorecanvas.create_text(695, 20, text='ROBOT', font=ROBOTPLATFONT)
+redrobotpf1 = scorecanvas.create_text(40, 45, text='NP', font=SMALLRINGFONT)
+redrobotpf2 = scorecanvas.create_text(105, 45, text='NP', font=SMALLRINGFONT)
+bluerobotpf1 = scorecanvas.create_text(760, 45, text='NP', font=SMALLRINGFONT)
+bluerobotpf2 = scorecanvas.create_text(695, 45, text='NP', font=SMALLRINGFONT)
+
+scorecanvas.create_rectangle(145, 7, 400, 73, fill='red', width=3)
+scorecanvas.create_rectangle(400, 7, 655, 73, fill='dodger blue', width=3)
+redautonpanel = scorecanvas.create_oval(160, 12, 218, 68, width=3, fill='grey75')
+blueautonpanel = scorecanvas.create_oval(640, 12, 582, 68, width=3, fill='grey75')
+scorecanvas.create_text(189, 40, text='A', font=AUTONFONT)
+scorecanvas.create_text(611, 40, text='A', font=AUTONFONT)
+
+redscorepanel = scorecanvas.create_text(300, 42, text=redscore, font=SCOREFONT)
+bluescorepanel = scorecanvas.create_text(500, 42, text=bluescore, font=SCOREFONT)
+
+def scoring():
+    redscore, bluescore = 0, 0
+
+    canvas.itemconfig(redbase1, text=redgoal1[0])
+    canvas.itemconfig(redbranch1, text=redgoal1[1])
+    canvas.itemconfig(redbase2, text=redgoal2[0])
+    canvas.itemconfig(redbranch2, text=redgoal2[1])
+    canvas.itemconfig(bluebase1, text=bluegoal1[0])
+    canvas.itemconfig(bluebranch1, text=bluegoal1[1])
+    canvas.itemconfig(bluebase2, text=bluegoal2[0])
+    canvas.itemconfig(bluebranch2, text=bluegoal2[1])
+    canvas.itemconfig(neutralbase1, text=neutralgoal1[0])
+    canvas.itemconfig(neutralbranch1, text=neutralgoal1[1])
+    canvas.itemconfig(neutralbase2, text=neutralgoal2[0])
+    canvas.itemconfig(neutralbranch2mid, text=neutralgoal2[1])
+    canvas.itemconfig(neutralbranch2high, text=neutralgoal2[2])
+    canvas.itemconfig(neutralbase3, text=neutralgoal3[0])
+    canvas.itemconfig(neutralbranch3, text=neutralgoal3[1])
+
+    red1color = canvas.itemcget(redgoalpanel1, 'fill')
+    red2color = canvas.itemcget(redgoalpanel2, 'fill')
+    neutral1color = canvas.itemcget(neutralgoalpanel1, 'fill')
+    neutral2color = canvas.itemcget(neutralgoalpanel2, 'fill')
+    neutral3color = canvas.itemcget(neutralgoalpanel3, 'fill')
+    blue1color = canvas.itemcget(bluegoalpanel1, 'fill')
+    blue2color = canvas.itemcget(bluegoalpanel2, 'fill')
+
+    colors = [red1color, red2color, neutral1color, neutral2color, neutral3color, blue1color, blue2color]
+    for x in range(len(colors)):
+        color = colors[x]
+        if color == 'red' and x < 5:
+            redscore += 20
+        elif color == 'dodger blue' and x > 1:
+            bluescore += 20
+
+    redpf1 = canvas.itemcget(redgoalpf1, 'text')
+    redpf2 = canvas.itemcget(redgoalpf2, 'text')
+    neutralpf1 = canvas.itemcget(neutralgoalpf1, 'text')
+    neutralpf2 = canvas.itemcget(neutralgoalpf2, 'text')
+    neutralpf3 = canvas.itemcget(neutralgoalpf3, 'text')
+    bluepf1 = canvas.itemcget(redgoalpf1, 'text')
+    bluepf2 = canvas.itemcget(redgoalpf2, 'text')
+
+    pfs = [redpf1, redpf2, neutralpf1, neutralpf2, neutralpf3, bluepf1, bluepf2]
+    for x in range(len(pfs)):
+        if pfs[x] == 'P':
+            if colors[x] == 'red' and x < 5:
+                redscore += 40
+            elif colors[x] == 'blue' and x > 1:
+                bluescore += 40
+
+    redbase1num, redbranch1num = int(canvas.itemcget(redbase1, 'text')), int(canvas.itemcget(redbranch1, 'text'))
+    redbase2num, redbranch2num = int(canvas.itemcget(redbase2, 'text')), int(canvas.itemcget(redbranch2, 'text'))
+    bluebase1num, bluebranch1num = int(canvas.itemcget(bluebase1, 'text')), int(canvas.itemcget(bluebranch1, 'text'))
+    bluebase2num, bluebranch2num = int(canvas.itemcget(bluebase2, 'text')), int(canvas.itemcget(bluebranch2, 'text'))
+
+    redscore += ((redbase1num + (3*redbranch1num))+(redbase2num + (3*redbranch2num)))
+    bluescore += ((bluebase1num + (3*bluebranch1num))+(bluebase2num + (3*bluebranch2num)))
+
+    neutralbase1num, neutralbranch1num = int(canvas.itemcget(neutralbase1, 'text')), int(canvas.itemcget(neutralbranch1, 'text'))
+    neutralbase2num, neutralbranch2midnum, neutralbranch2highnum = int(canvas.itemcget(neutralbase2, 'text')), int(canvas.itemcget(neutralbranch2mid, 'text')), int(canvas.itemcget(neutralbranch2high, 'text'))
+    neutralbase3num, neutralbranch3num = int(canvas.itemcget(neutralbase3, 'text')), int(canvas.itemcget(neutralbranch3, 'text'))
+
+    neutral1score = neutralbase1num + 3*neutralbranch1num
+    neutral2score = neutralbase2num + 3*neutralbranch2midnum + 10*neutralbranch2highnum
+    neutral3score = neutralbase3num + 3*neutralbranch3num
+
+    if neutral1color == 'red':
+        redscore += neutral1score
+    elif neutral1color == 'dodger blue':
+        bluescore += neutral1score
+
+    if neutral2color == 'red':
+        redscore += neutral2score
+    elif neutral2color == 'dodger blue':
+        bluescore += neutral2score
+
+    if neutral3color == 'red':
+        redscore += neutral3score
+    elif neutral3color == 'dodger blue':
+        bluescore += neutral3score
+
+
+    if scorecanvas.itemcget(redrobotpf1, 'text') == 'P':
+        redscore += 30
+
+    if scorecanvas.itemcget(redrobotpf2, 'text') == 'P':
+        redscore += 30
+
+    if scorecanvas.itemcget(bluerobotpf1, 'text') == 'P':
+        bluescore += 30
+
+    if scorecanvas.itemcget(bluerobotpf2, 'text') == 'P':
+        bluescore += 30
+
+    if (scorecanvas.itemcget(redautonpanel, 'fill') == 'yellow') and (scorecanvas.itemcget(blueautonpanel, 'fill') == 'yellow'):
+        redscore += 10
+        bluescore += 10
+    elif (scorecanvas.itemcget(redautonpanel, 'fill') == 'yellow') and (scorecanvas.itemcget(blueautonpanel, 'fill') == 'grey75'):
+        redscore += 20
+    elif (scorecanvas.itemcget(redautonpanel, 'fill') == 'grey75') and (scorecanvas.itemcget(blueautonpanel, 'fill') == 'yellow'):
+        bluescore += 20
+
+
+    scorecanvas.itemconfig(redscorepanel, text=redscore)
+    scorecanvas.itemconfig(bluescorepanel, text=bluescore)
+
+def scoreadd(event):
+    x, y = event.x, event.y
+    global redgoal1ison, redgoal2ison, bluegoal1ison, bluegoal2ison, neutralgoal1ison, neutralgoal2ison, neutralgoal3ison
+
+    global numrings
+    #print('Before: ' + str(numrings))
+    if numrings < MAX_RINGS:
+
+        if y > 30 and y < 110:
+            if x > 160 and x < 240:
+                redgoal1[1] += 1
+                numrings += 1
+            elif x > 560 and x < 640:
+                redgoal2[1] += 1
+                numrings += 1
+
+        if y > 180 and y < 250:
+            if x > 125 and x < 275:
+                redgoal1[0] += 1
+                numrings += 1
+            elif x > 525 and x < 675:
+                redgoal2[0] += 1
+                numrings += 1
+
+        if y > 180 + (800 / 3) and y < 250 + (800 / 3):
+            if x > (400 / 3) - 75 and x < (400 / 3) + 75:
+                neutralgoal1[0] += 1
+                numrings += 1
+            elif x > 325 and x < 475:
+                neutralgoal2[0] += 1
+                numrings += 1
+            elif x > (2000 / 3) - 75 and x < (2000 / 3) + 75:
+                neutralgoal3[0] += 1
+                numrings += 1
+
+        if y > 30 + (800 / 3) and y < 110 + (800 / 3):
+            if x > (400 / 3) - 40 and x < (400 / 3) + 40:
+                neutralgoal1[1] += 1
+                numrings += 1
+            elif x > (2000 / 3) - 40 and x < (2000 / 3) + 40:
+                neutralgoal3[1] += 1
+                numrings += 1
+
+        if x > 370 and x < 430:
+            if y > 20 + (800 / 3) and y < 80 + (800 / 3):
+                neutralgoal2[2] += 1
+                numrings += 1
+            elif y > 100 + (800 / 3) and y < 160 + (800 / 3):
+                neutralgoal2[1] += 1
+                numrings += 1
+
+        if y > 30 + (1600 / 3) and y < 110 + (1600 / 3):
+            if x > 160 and x < 240:
+                bluegoal1[1] += 1
+                numrings += 1
+            elif x > 560 and x < 640:
+                bluegoal2[1] += 1
+                numrings += 1
+
+        if y > 180 + (1600 / 3) and y < 250 + (1600 / 3):
+            if x > 125 and x < 275:
+                bluegoal1[0] += 1
+                numrings += 1
+            elif x > 525 and x < 675:
+                bluegoal2[0] += 1
+                numrings += 1
+
+        #print('After: ' + str(numrings))
+
+    if x > 0 and x < 400 and y > 0 and y < 800/3:
+        if x > 160 and x < 240 and y > 30 and y < 110:
+            pass
+        elif x > 125 and x < 275 and y > 180 and y < 250:
+            pass
+        elif x > 340 and x < 390 and y > 10 and y < 60:
+            pass
+        else:
+            if canvas.itemcget(redgoalpanel1, 'fill') == 'red':
+                canvas.itemconfig(redgoalpanel1, fill='dodger blue')
+            elif canvas.itemcget(redgoalpanel1, 'fill') == 'dodger blue':
+                canvas.itemconfig(redgoalpanel1, fill='yellow')
+            else:
+                canvas.itemconfig(redgoalpanel1, fill='red')
+
+    if x > 400 and x < 800 and y > 0 and y < 800/3:
+        if x > 560 and x < 640 and y > 30 and y < 110:
+            pass
+        elif x > 525 and x < 675 and y > 180 and y < 250:
+            pass
+        elif x > 740 and x < 790 and y > 10 and y < 60:
+            pass
+        else:
+            if canvas.itemcget(redgoalpanel2, 'fill') == 'red':
+                canvas.itemconfig(redgoalpanel2, fill='dodger blue')
+            elif canvas.itemcget(redgoalpanel2, 'fill') == 'dodger blue':
+                canvas.itemconfig(redgoalpanel2, fill='yellow')
+            else:
+                canvas.itemconfig(redgoalpanel2, fill='red')
+
+    if x > 0 and x < 800/3 and y > 800/3 and y < 1600/3:
+        if x > (400/3)-40 and x < (400/3)+40 and y > (800/3)+30 and y < (800/3)+110:
+            pass
+        elif x > (400/3)-75 and x < (400/3)+75 and y > (800/3)+180 and y < (800/3)+250:
+            pass
+        elif x > (800/3)-60 and x < (800/3)-10 and y > (800/3)+10 and y < (800/3)+60:
+            pass
+        else:
+            if canvas.itemcget(neutralgoalpanel1, 'fill') == 'red':
+                canvas.itemconfig(neutralgoalpanel1, fill='dodger blue')
+            elif canvas.itemcget(neutralgoalpanel1, 'fill') == 'dodger blue':
+                canvas.itemconfig(neutralgoalpanel1, fill='yellow')
+            else:
+                canvas.itemconfig(neutralgoalpanel1, fill='red')
+
+    if x > 800/3 and x < 1600/3 and y > 800/3 and y < 1600/3:
+        if x > 370 and x < 430 and ((y > (800/3)+20 and y < (800/3)+80) or (y > (800/3)+100 and y < (800/3)+160)):
+            pass
+        elif x > 325 and x < 475 and y > (800/3)+180 and y < (800/3)+250:
+            pass
+        elif x > (1600/3)-60 and x < (1600/3)-10 and y > (800/3)+10 and y < (800/3)+60:
+            pass
+        else:
+            if canvas.itemcget(neutralgoalpanel2, 'fill') == 'red':
+                canvas.itemconfig(neutralgoalpanel2, fill='dodger blue')
+            elif canvas.itemcget(neutralgoalpanel2, 'fill') == 'dodger blue':
+                canvas.itemconfig(neutralgoalpanel2, fill='yellow')
+            else:
+                canvas.itemconfig(neutralgoalpanel2, fill='red')
+
+    if x > 1600/3 and x < 800 and y > 800/3 and y < 1600/3:
+        if x > (2000/3)-40 and x < (2000/3)+40 and y > (800/3)+30 and y < (800/3)+110:
+            pass
+        elif x > (2000/3)-75 and x < (2000/3)+75 and y > (800/3)+180 and y < (800/3)+250:
+            pass
+        elif x > 740 and x < 790 and y > (800/3)+10 and y < (800/3)+60:
+            pass
+        else:
+            if canvas.itemcget(neutralgoalpanel3, 'fill') == 'red':
+                canvas.itemconfig(neutralgoalpanel3, fill='dodger blue')
+            elif canvas.itemcget(neutralgoalpanel3, 'fill') == 'dodger blue':
+                canvas.itemconfig(neutralgoalpanel3, fill='yellow')
+            else:
+                canvas.itemconfig(neutralgoalpanel3, fill='red')
+
+    if x > 0 and x < 400 and y > 1600/3 and y < 800:
+        if x > 160 and x < 240 and y > (1600/3)+30 and y < (1600/3)+110:
+            pass
+        elif x > 125 and x < 275 and y > (1600/3)+180 and y < (1600/3)+250:
+            pass
+        elif x > 340 and x < 390 and y > (1600/3)+10 and y < (1600/3)+60:
+            pass
+        else:
+            if canvas.itemcget(bluegoalpanel1, 'fill') == 'red':
+                canvas.itemconfig(bluegoalpanel1, fill='dodger blue')
+            elif canvas.itemcget(bluegoalpanel1, 'fill') == 'dodger blue':
+                canvas.itemconfig(bluegoalpanel1, fill='yellow')
+            else:
+                canvas.itemconfig(bluegoalpanel1, fill='red')
+
+    if x > 400 and x < 800 and y > 1600/3 and y < 800:
+        if x > 560 and x < 640 and y > (1600/3)+30 and y < (1600/3)+110:
+            pass
+        elif x > 525 and x < 675 and y > (1600/3)+180 and y < (1600/3)+250:
+            pass
+        elif x > 740 and x < 790 and y > (1600/3)+10 and y < (1600/3)+60:
+            pass
+        else:
+            if canvas.itemcget(bluegoalpanel2, 'fill') == 'red':
+                canvas.itemconfig(bluegoalpanel2, fill='dodger blue')
+            elif canvas.itemcget(bluegoalpanel2, 'fill') == 'dodger blue':
+                canvas.itemconfig(bluegoalpanel2, fill='yellow')
+            else:
+                canvas.itemconfig(bluegoalpanel2, fill='red')
+
+    if y > 10 and y < 60:
+        if x > 340 and x < 390:
+            redgoal1ison = True if redgoal1ison is False else False
+            canvas.itemconfig(redgoalpf1, text='P' if redgoal1ison else 'NP')
+        elif x > 740 and x < 790:
+            redgoal2ison = True if redgoal2ison is False else False
+            canvas.itemconfig(redgoalpf2, text='P' if redgoal2ison else 'NP')
+
+    if y > (800/3)+10 and y < (800/3)+60:
+        if x > (800/3)-60 and x < (800/3)-10:
+            neutralgoal1ison = True if neutralgoal1ison is False else False
+            canvas.itemconfig(neutralgoalpf1, text='P' if neutralgoal1ison else 'NP')
+        if x > (1600/3)-60 and x < (1600/3)-10:
+            neutralgoal2ison = True if neutralgoal2ison is False else False
+            canvas.itemconfig(neutralgoalpf2, text='P' if neutralgoal2ison else 'NP')
+        if x > 740 and x < 790:
+            neutralgoal3ison = True if neutralgoal3ison is False else False
+            canvas.itemconfig(neutralgoalpf3, text='P' if neutralgoal3ison else 'NP')
+
+    if y > (1600/3)+10 and y < (1600/3)+60:
+        if x > 340 and x < 390:
+            bluegoal1ison = True if bluegoal1ison is False else False
+            canvas.itemconfig(bluegoalpf1, text='P' if bluegoal1ison else 'NP')
+        elif x > 740 and x < 790:
+            bluegoal2ison = True if bluegoal2ison is False else False
+            canvas.itemconfig(bluegoalpf2, text='P' if bluegoal2ison else 'NP')
+
+    scoring()
+
+
+def scoresub(event):
+    x, y = event.x, event.y
+
+    global numrings
+    #print('Before: ' + str(numrings))
+    if numrings > 0:
+
+        if y > 30 and y < 110:
+            if x > 160 and x < 240:
+                redgoal1[1] = redgoal1[1]-1 if numrings+redgoal1[1] > numrings else redgoal1[1]
+                numrings = numrings - 1 if numrings + redgoal1[1] > numrings else numrings
+            elif x > 560 and x < 640:
+                redgoal2[1] = redgoal2[1]-1 if numrings+redgoal2[1] > numrings else redgoal2[1]
+                numrings = numrings - 1 if numrings + redgoal1[1] > numrings else numrings
+
+        if y > 180 and y < 250:
+            if x > 125 and x < 275:
+                redgoal1[0] = redgoal1[0]-1 if numrings+redgoal1[0] > numrings else redgoal1[0]
+                numrings = numrings - 1 if numrings + redgoal1[1] > numrings else numrings
+            elif x > 525 and x < 675:
+                redgoal2[0] = redgoal2[0]-1 if numrings+redgoal2[0] > numrings else redgoal2[0]
+                numrings = numrings - 1 if numrings + redgoal1[1] > numrings else numrings
+
+        if y > 180+(800/3) and y < 250+(800/3):
+            if x > (400/3)-75 and x < (400/3)+75:
+                neutralgoal1[0] = neutralgoal1[0]-1 if numrings+neutralgoal1[0] > numrings else neutralgoal1[0]
+                numrings = numrings - 1 if numrings + redgoal1[1] > numrings else numrings
+            elif x > 325 and x < 475:
+                neutralgoal2[0] = neutralgoal2[0]-1 if numrings+neutralgoal2[0] > numrings else neutralgoal2[0]
+                numrings = numrings - 1 if numrings + redgoal1[1] > numrings else numrings
+            elif x > (2000/3)-75 and x < (2000/3)+75:
+                neutralgoal3[0] = neutralgoal3[0]-1 if numrings+neutralgoal3[0] > numrings else neutralgoal3[0]
+                numrings = numrings - 1 if numrings + redgoal1[1] > numrings else numrings
+
+        if y > 30+(800/3) and y < 110+(800/3):
+            if x > (400/3)-40 and x < (400/3)+40:
+                neutralgoal1[1] = neutralgoal1[1]-1 if numrings+neutralgoal1[1] > numrings else neutralgoal1[1]
+                numrings = numrings - 1 if numrings + redgoal1[1] > numrings else numrings
+            elif x > (2000/3)-40 and x < (2000/3)+40:
+                neutralgoal3[1] = neutralgoal3[1]-1 if numrings+neutralgoal3[1] > numrings else neutralgoal3[1]
+                numrings = numrings - 1 if numrings + redgoal1[1] > numrings else numrings
+
+        if x > 370 and x < 430:
+            if y > 20+(800/3) and y < 80+(800/3):
+                neutralgoal2[2] = neutralgoal2[2]-1 if numrings+neutralgoal2[2] > numrings else neutralgoal2[2]
+                numrings = numrings - 1 if numrings + redgoal1[1] > numrings else numrings
+            elif y > 100+(800/3) and y < 160+(800/3):
+                neutralgoal2[1] = neutralgoal2[1]-1 if numrings+neutralgoal2[1] > numrings else neutralgoal2[1]
+                numrings = numrings - 1 if numrings + redgoal1[1] > numrings else numrings
+
+        if y > 30+(1600/3) and y < 110+(1600/3):
+            if x > 160 and x < 240:
+                bluegoal1[1] = bluegoal1[1]-1 if numrings+bluegoal1[1] > numrings else bluegoal1[1]
+                numrings = numrings - 1 if numrings + redgoal1[1] > numrings else numrings
+            elif x > 560 and x < 640:
+                bluegoal2[1] = bluegoal2[1]-1 if numrings+bluegoal2[1] > numrings else bluegoal2[1]
+                numrings = numrings - 1 if numrings + redgoal1[1] > numrings else numrings
+
+        if y > 180+(1600/3) and y < 250+(1600/3):
+            if x > 125 and x < 275:
+                bluegoal1[0] = bluegoal1[0]-1 if numrings+bluegoal1[0] > numrings else bluegoal1[0]
+                numrings = numrings - 1 if numrings + redgoal1[1] > numrings else numrings
+            elif x > 525 and x < 675:
+                bluegoal2[0] = bluegoal2[0]-1 if numrings+bluegoal2[0] > numrings else bluegoal2[0]
+                numrings = numrings - 1 if numrings + redgoal1[1] > numrings else numrings
+
+    scoring()
+
+def scorechange(event):
+    x, y = event.x, event.y
+
+    if y > 10 and y < 70:
+
+        if x > 10 and x < 70:
+            if scorecanvas.itemcget(redrobotpf1, 'text') == 'NP':
+                scorecanvas.itemconfig(redrobotpf1, text='P')
+            else:
+                scorecanvas.itemconfig(redrobotpf1, text='NP')
+
+        elif x > 75 and x < 135:
+            if scorecanvas.itemcget(redrobotpf2, 'text') == 'NP':
+                scorecanvas.itemconfig(redrobotpf2, text='P')
+            else:
+                scorecanvas.itemconfig(redrobotpf2, text='NP')
+
+        elif x > 730 and x < 790:
+            if scorecanvas.itemcget(bluerobotpf1, 'text') == 'NP':
+                scorecanvas.itemconfig(bluerobotpf1, text='P')
+            else:
+                scorecanvas.itemconfig(bluerobotpf1, text='NP')
+
+        elif x > 665 and x < 725:
+            if scorecanvas.itemcget(bluerobotpf2, 'text') == 'NP':
+                scorecanvas.itemconfig(bluerobotpf2, text='P')
+            else:
+                scorecanvas.itemconfig(bluerobotpf2, text='NP')
+
+    if y > 7 and y < 73:
+
+        if x > 160 and x < 218:
+            if scorecanvas.itemcget(redautonpanel, 'fill') == 'grey75':
+                scorecanvas.itemconfig(redautonpanel, fill='yellow')
+            else:
+                scorecanvas.itemconfig(redautonpanel, fill='grey75')
+
+        elif x > 582 and x < 640:
+            if scorecanvas.itemcget(blueautonpanel, 'fill') == 'grey75':
+                scorecanvas.itemconfig(blueautonpanel, fill='yellow')
+            else:
+                scorecanvas.itemconfig(blueautonpanel, fill='grey75')
+
+    scoring()
+
+
+# binding
+canvas.bind('<Button-1>', scoreadd)
+canvas.bind('<Button-2>', scoresub)
+scorecanvas.bind('<Button-1>', scorechange)
+
+
+
+
+# activator for launching tkinter assets
+mainloop()
