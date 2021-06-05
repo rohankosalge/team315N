@@ -24,6 +24,7 @@ PANELFONT = ('Courier', 18, 'italic')
 
 # other constants
 MAX_RINGS = 72
+PLATFORM_GOAL_SCORE = 20    # not sure if it's 20 or 40 based on the vagueness of the manual, but Rudra and I decided that it's 20 for now.
 
 
 
@@ -138,6 +139,11 @@ scorecanvas.create_text(611, 40, text='A', font=AUTONFONT)
 redscorepanel = scorecanvas.create_text(300, 42, text=redscore, font=SCOREFONT)
 bluescorepanel = scorecanvas.create_text(500, 42, text=bluescore, font=SCOREFONT)
 
+
+scorecanvas.create_rectangle(375, 12, 425, 68, fill='white', width=3)
+scorecanvas.create_text(400, 40, text='R', font=BIGRINGFONT)
+
+
 def scoring():
     redscore, bluescore = 0, 0
 
@@ -178,16 +184,17 @@ def scoring():
     neutralpf1 = canvas.itemcget(neutralgoalpf1, 'text')
     neutralpf2 = canvas.itemcget(neutralgoalpf2, 'text')
     neutralpf3 = canvas.itemcget(neutralgoalpf3, 'text')
-    bluepf1 = canvas.itemcget(redgoalpf1, 'text')
-    bluepf2 = canvas.itemcget(redgoalpf2, 'text')
+    bluepf1 = canvas.itemcget(bluegoalpf1, 'text')
+    bluepf2 = canvas.itemcget(bluegoalpf2, 'text')
 
     pfs = [redpf1, redpf2, neutralpf1, neutralpf2, neutralpf3, bluepf1, bluepf2]
+    print(pfs)
     for x in range(len(pfs)):
         if pfs[x] == 'P':
             if colors[x] == 'red' and x < 5:
-                redscore += 40
-            elif colors[x] == 'blue' and x > 1:
-                bluescore += 40
+                redscore += PLATFORM_GOAL_SCORE
+            elif colors[x] == 'dodger blue' and x > 1:
+                bluescore += PLATFORM_GOAL_SCORE
 
     redbase1num, redbranch1num = int(canvas.itemcget(redbase1, 'text')), int(canvas.itemcget(redbranch1, 'text'))
     redbase2num, redbranch2num = int(canvas.itemcget(redbase2, 'text')), int(canvas.itemcget(redbranch2, 'text'))
@@ -244,6 +251,64 @@ def scoring():
 
     scorecanvas.itemconfig(redscorepanel, text=redscore)
     scorecanvas.itemconfig(bluescorepanel, text=bluescore)
+
+
+def reset():
+    canvas.itemconfig(redbase1, text=0)
+    canvas.itemconfig(redbranch1, text=0)
+    canvas.itemconfig(redbase2, text=0)
+    canvas.itemconfig(redbranch2, text=0)
+    canvas.itemconfig(bluebase1, text=0)
+    canvas.itemconfig(bluebranch1, text=0)
+    canvas.itemconfig(bluebase2, text=0)
+    canvas.itemconfig(bluebranch2, text=0)
+    canvas.itemconfig(neutralbase1, text=0)
+    canvas.itemconfig(neutralbranch1, text=0)
+    canvas.itemconfig(neutralbase2, text=0)
+    canvas.itemconfig(neutralbranch2mid, text=0)
+    canvas.itemconfig(neutralbranch2high, text=0)
+    canvas.itemconfig(neutralbase3, text=0)
+    canvas.itemconfig(neutralbranch3, text=0)
+
+    canvas.itemconfig(redgoalpanel1, fill='red')
+    canvas.itemconfig(redgoalpanel2, fill='red')
+    canvas.itemconfig(bluegoalpanel1, fill='dodger blue')
+    canvas.itemconfig(bluegoalpanel2, fill='dodger blue')
+    canvas.itemconfig(neutralgoalpanel1, fill='yellow')
+    canvas.itemconfig(neutralgoalpanel2, fill='yellow')
+    canvas.itemconfig(neutralgoalpanel3, fill='yellow')
+
+    canvas.itemconfig(redgoalpf1, text='NP')
+    canvas.itemconfig(redgoalpf2, text='NP')
+    canvas.itemconfig(bluegoalpf1, text='NP')
+    canvas.itemconfig(bluegoalpf2, text='NP')
+    canvas.itemconfig(neutralgoalpf1, text='NP')
+    canvas.itemconfig(neutralgoalpf2, text='NP')
+    canvas.itemconfig(neutralgoalpf3, text='NP')
+
+    scorecanvas.itemconfig(redrobotpf1, text='NP')
+    scorecanvas.itemconfig(redrobotpf2, text='NP')
+    scorecanvas.itemconfig(bluerobotpf1, text='NP')
+    scorecanvas.itemconfig(bluerobotpf2, text='NP')
+
+    scorecanvas.itemconfig(redautonpanel, fill='grey75')
+    scorecanvas.itemconfig(blueautonpanel, fill='grey75')
+
+    scorecanvas.itemconfig(redscorepanel, text=40)
+    scorecanvas.itemconfig(bluescorepanel, text=40)
+
+    global redgoal1, redgoal2
+    global bluegoal1, bluegoal2
+    global neutralgoal1, neutralgoal2, neutralgoal3
+    global redgoal1ison, redgoal2ison, bluegoal2ison, bluegoal2ison
+    global neutral1ison, neutral2ison, neutral3ison
+    redgoal1, redgoal2 = [0, 0], [0, 0]
+    bluegoal1, bluegoal2 = [0, 0], [0, 0]
+    neutralgoal1, neutralgoal2, neutralgoal3 = [0, 0], [0, 0, 0], [0, 0]
+    redgoal1ison, redgoal2ison, bluegoal1ison, bluegoal2ison = False, False, False, False
+    neutralgoal1ison, neutralgoal2ison, neutralgoal3ison = False, False, False
+
+    #scoring()
 
 def scoreadd(event):
     x, y = event.x, event.y
@@ -559,6 +624,9 @@ def scorechange(event):
                 scorecanvas.itemconfig(blueautonpanel, fill='yellow')
             else:
                 scorecanvas.itemconfig(blueautonpanel, fill='grey75')
+
+    if x > 375 and x < 425 and y > 12 and y < 68:
+        reset()
 
     scoring()
 
